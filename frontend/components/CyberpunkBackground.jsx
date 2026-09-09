@@ -108,4 +108,18 @@ export default function CyberpunkBackground() {
     };
   }, []);
 
- 
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        zIndex: 0,
+        display: "block",
+      }}
+    />
+  );
+}
