@@ -29,4 +29,20 @@ export default function NeonInput({
     }
   };
 
- 
+  return (
+    <input
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      onChange={handleChange}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      className={`
+        w-full rounded-xl px-4 py-3.5 text-sm text-white
+        bg-[rgba(6,182,212,0.05)] border transition-all duration-200
+        placeholder:text-[#475569] outline-none
+        ${focused ? focusGlow : idleGlow}
+      `}
+    />
+  );
+}
