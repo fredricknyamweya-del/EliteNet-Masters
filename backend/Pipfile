@@ -1,0 +1,20 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[packages]
+flask = "*"
+flask-cors = "*"
+flask-sqlalchemy = "*"
+flask-migrate= "*"
+flask-apscheduler = "*"
+python-dotenv = "*"
+requests = "*"
+psycopg2-binary = "*"
+routeros-api = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.14.5"
