@@ -38,7 +38,7 @@ Fallback options — M-Pesa code reconnect or admin-issued vouchers — ensure a
 - **Database**: PostgreSQL or MySQL, via SQLAlchemy — transactions, packages, sessions, vouchers.  
 - **Scheduling**: APScheduler / Flask-APScheduler — session expiry.  
 - **Cross-origin requests**: Flask-CORS.  
-- **Hosting**: VPS (always-on) for backend.  
+- **Hosting**: Render/VPS (always-on) for backend.  
 
 ## Project Structure
 ```
