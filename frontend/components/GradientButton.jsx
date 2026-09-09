@@ -18,3 +18,20 @@ export default function GradientButton({
 
   const gradientClass = gradMap[gradient] || gradMap["cyan-green"];
 
+ return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={`
+        w-full py-3.5 rounded-xl font-bold text-white text-base
+        bg-linear-to-r ${gradientClass}
+        transition-all duration-200 tracking-wide uppercase
+        disabled:opacity-60 disabled:cursor-not-allowed
+        ${className}
+      `}
+    >
+      {children}
+    </button>
+  );
+}
