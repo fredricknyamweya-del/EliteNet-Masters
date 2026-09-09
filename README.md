@@ -151,8 +151,8 @@ ROUTEROS_PASSWORD=
 - ISP LAN → MikroTik WAN (ether1). Switch only needed downstream for multiple APs or extra wired devices.  
 
 ## Hosting
-- **Frontend**: Netlify/Vercel.  
-- **Backend**: VPS (always-on).  
+- **Frontend**: Render.  
+- **Backend**: Render.  
 
 ## Client-Side Requirements
 - MikroTik router hardware (client purchases).  
