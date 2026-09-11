@@ -10,11 +10,11 @@ Fallback options — M-Pesa code reconnect or admin-issued vouchers — ensure a
 | Package      | Price (KSh) |
 |--------------|-------------|
 | 30 minutes   | 5           |
-| 3 hours      | 15          |
-| 6 hours      | 30          |
-| 24 hours     | 60          |
-| Weekly       | 200         |
-| Monthly      | 600         |
+| 1 hour       | 15          |
+| 3 hours      | 30          |
+| 6 hours.     | 60          |
+| 24 hours     | 100         |
+| Weekly       | 300         |
 
 ## Workflow
 1. Client connects to WiFi → redirected to captive portal.  
