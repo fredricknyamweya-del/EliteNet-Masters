@@ -1,0 +1,107 @@
+from decimal import Decimal
+
+from flask import Blueprint, jsonify, request
+
+from app.extensions import db
+from models.models import Package, Router, Session, Transaction
+from services.auth import require_admin_auth
+
+
+admin_bp = Blueprint("admin", __name__)
+
+
+@admin_bp.get("/api/admin/transactions")
+@require_admin_auth
+def list_transactions():
+    records = Transaction.query.order_by(Transaction.created_at.desc()).all()
+    return jsonify({"status": "success", "data": [record.to_dict() for record in records]}), 200
+
+
+@admin_bp.get("/api/admin/active-users")
+@require_admin_auth
+def list_active_users():
+    active_sessions = Session.query.filter_by(is_active=True).all()
+    return jsonify({"status": "success", "data": [record.to_dict() for record in active_sessions]}), 200
+
+
+@admin_bp.get("/api/admin/routers")
+@require_admin_auth
+def list_routers():
+    records = Router.query.order_by(Router.created_at.desc()).all()
+    return jsonify({"status": "success", "data": [record.to_dict() for record in records]}), 200
+
+
+@admin_bp.get("/api/admin/plans")
+@require_admin_auth
+def list_plans():
+    records = Package.query.order_by(Package.duration_minutes.asc()).all()
+    return jsonify({
+        "status": "success",
+        "data": [
+            {
+                "id": record.id,
+                "name": record.name,
+                "price": float(record.price) if record.price is not None else 0,
+                "duration_minutes": record.duration_minutes,
+                "is_active": record.is_active,
+            }
+            for record in records
+        ],
+    }), 200
+
+
+@admin_bp.patch("/api/admin/plans/<int:plan_id>")
+@require_admin_auth
+def update_plan(plan_id):
+    payload = request.get_json(silent=True) or {}
+    price = payload.get("price")
+
+    if price is None:
+        return jsonify({"status": "error", "message": "price is required."}), 400
+
+    try:
+        normalized_price = Decimal(str(price))
+    except Exception:
+        return jsonify({"status": "error", "message": "price must be numeric."}), 400
+
+    plan = Package.query.get(plan_id)
+    if not plan:
+        return jsonify({"status": "error", "message": "Plan not found."}), 404
+
+    plan.price = normalized_price
+    db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "message": "Plan updated successfully.",
+        "data": {
+            "id": plan.id,
+            "name": plan.name,
+            "price": float(plan.price),
+            "duration_minutes": plan.duration_minutes,
+            "is_active": plan.is_active,
+        },
+    }), 200
+
+
+@admin_bp.post("/api/admin/restart")
+@require_admin_auth
+def restart_router():
+    payload = request.get_json(silent=True) or {}
+    router_id = payload.get("router_id")
+
+    if router_id is None:
+        return jsonify({"status": "error", "message": "router_id is required."}), 400
+
+    router = Router.query.get(router_id)
+    if not router:
+        return jsonify({"status": "error", "message": "Router not found."}), 404
+
+    router.status = "restarting"
+    db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "message": f"Router '{router.name}' is restarting.",
+        "data": router.to_dict(),
+    }), 200
