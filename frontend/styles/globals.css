@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/* EliteNet Masters design system — telecom SaaS palette */
+:root {
+  --pn-primary:   #2563EB;
+  --pn-cyan:      #06B6D4;
+  --pn-green:     #10B981;
+  --pn-navy:      #0D1B2A;
+  --pn-navy-deep: #162B45;
+  --pn-purple:    #7C3AED;
+
+  --pn-success:   #22C55E;
+  --pn-warning:   #F59E0B;
+  --pn-error:     #EF4444;
+  --pn-info:      #3B82F6;
+
+  --pn-text-muted:    #475569;
+  --pn-placeholder:   #475569;
+}
+
+body {
+  background-color: var(--pn-navy);
+  color: white;
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.font-orbitron {
+  font-family: var(--font-orbitron), sans-serif;
+}
