@@ -10,7 +10,7 @@ Fallback options — M-Pesa code reconnect or admin-issued vouchers — ensure a
 | Package      | Price (KSh) |
 |--------------|-------------|
 | 30 minutes   | 5           |
-| 1 hour       | 15          |
+| 1 hour       | 10          |
 | 3 hours      | 30          |
 | 6 hours.     | 60          |
 | 24 hours     | 100         |
