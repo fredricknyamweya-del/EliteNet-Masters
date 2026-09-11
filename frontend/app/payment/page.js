@@ -12,7 +12,7 @@ import { checkPaymentStatus, triggerStkPush } from "../../lib/api";
 const PACKAGES = [
   { id: 1, label: "30minutes", price: 5 },
   { id: 2, label: "1hour",     price: 10 },
-  { id: 3, label: "3hours",    price: 20 },
+  { id: 3, label: "3hours",    price: 30 },
   { id: 4, label: "6hours",    price: 60 },
   { id: 5, label: "24hours",   price: 100 },
   { id: 6, label: "Weekly",    price: 300 },
