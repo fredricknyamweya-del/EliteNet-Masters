@@ -179,7 +179,7 @@ export default function PackagesPage() {
                 </li>
               </ol>
               <p className="text-[#e0f2ec] text-xs text-center mt-3">
-                (Customer care: 0724943877)
+                (Customer care: 0708419329)
               </p>
             </GlassCard>
 
