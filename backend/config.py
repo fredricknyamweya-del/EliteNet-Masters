@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 
 def _get_database_uri():
@@ -17,6 +18,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = _get_database_uri()
     ADMIN_TOKEN_EXP_MINUTES = int(os.getenv("ADMIN_TOKEN_EXP_MINUTES", "480"))
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=ADMIN_TOKEN_EXP_MINUTES)
     MPESA_STK_TIMEOUT_MINUTES = int(
         os.getenv("MPESA_STK_TIMEOUT_MINUTES", "5")
     )

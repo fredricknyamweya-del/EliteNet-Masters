@@ -3,11 +3,10 @@ from decimal import Decimal
 
 from flask import Flask
 from flask_cors import CORS
-from werkzeug.security import generate_password_hash
 
-from app.extensions import db, migrate
+from extensions import api, bcrypt, db, jwt, migrate
 from config import config_by_name
-from routes import ALL_BLUEPRINTS
+from routes import __all__
 
 
 def _ensure_default_admin(app):
@@ -18,7 +17,8 @@ def _ensure_default_admin(app):
 
 		admin = Admin.query.filter_by(username="admin").first()
 		if admin is None:
-			admin = Admin(username="admin", password_hash=generate_password_hash("Admin@2026"))
+			admin = Admin(username="admin")
+			admin.set_password("Admin@2026")
 			db.session.add(admin)
 			db.session.commit()
 		elif not admin.password_hash:
@@ -104,13 +104,16 @@ def create_app(config_name=None):
 	CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
 
 	db.init_app(app)
+	bcrypt.init_app(app)
+	jwt.init_app(app)
+	api.init_app(app)
 	if migrate is not None:
 		migrate.init_app(app, db)
 	# Ensure model metadata is loaded before db.create_all or migrations.
 	from models import models as _models  # noqa: F401
 
-	for blueprint in ALL_BLUEPRINTS:
-		app.register_blueprint(blueprint)
+	# for blueprint in ALL_BLUEPRINTS:
+	# 	app.register_blueprint(blueprint)
 
 	_ensure_default_admin(app)
 	_ensure_default_packages(app)
@@ -131,7 +134,7 @@ except Exception:
 if __name__ == "__main__":
 	# Allow overriding the port via the PORT environment variable (useful when 5000 is occupied)
 	try:
-		port = int(os.getenv("PORT", "5000"))
+		port = int(os.getenv("PORT", "5555"))
 	except Exception:
 		port = 5000
 	app.run(host="0.0.0.0", port=port)
