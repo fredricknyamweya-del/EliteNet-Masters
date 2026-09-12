@@ -49,11 +49,27 @@ class AdminTransactions(Resource):
 api.add_resource(AdminTransactions, "/api/admin/transactions")
 
 
-@admin_bp.get("/api/admin/active-users")
-@require_admin_auth
-def list_active_users():
-    active_sessions = Session.query.filter_by(is_active=True).all()
-    return jsonify({"status": "success", "data": [record.to_dict() for record in active_sessions]}), 200
+class AdminActiveUsers(Resource):
+    @jwt_required()
+    def get(self):
+        try:
+            admin_id = int(get_jwt_identity())
+        except (TypeError, ValueError):
+            return {"status": "error", "message": "Unauthorized admin access."}, 401
+
+        try:
+            if db.session.get(Admin, admin_id) is None:
+                return {"status": "error", "message": "Unauthorized admin access."}, 401
+
+            active_sessions = Session.query.filter_by(is_active=True).all()
+            return {"status": "success", "data": [record.to_dict() for record in active_sessions]}, 200
+        except SQLAlchemyError:
+            db.session.rollback()
+            current_app.logger.exception("Failed to retrieve admin active users")
+            return {"status": "error", "message": "Unable to retrieve active users."}, 500
+
+
+api.add_resource(AdminActiveUsers, "/api/admin/active-users")
 
 
 @admin_bp.get("/api/admin/routers")
