@@ -1,20 +1,52 @@
 from decimal import Decimal
+from functools import wraps
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_restful import Resource
+from sqlalchemy.exc import SQLAlchemyError
 
-from app.extensions import db
-from models.models import Package, Router, Session, Transaction
-from services.auth import require_admin_auth
+from extensions import api, db
+from models.models import Admin, Package, Router, Session, Transaction
+
+
+def require_admin_auth(view):
+    # Defer the legacy dependency while these endpoints remain unregistered.
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        from services.auth import require_admin_auth as legacy_require_admin_auth
+
+        return legacy_require_admin_auth(view)(*args, **kwargs)
+
+    return wrapped
 
 
 admin_bp = Blueprint("admin", __name__)
 
 
-@admin_bp.get("/api/admin/transactions")
-@require_admin_auth
-def list_transactions():
-    records = Transaction.query.order_by(Transaction.created_at.desc()).all()
-    return jsonify({"status": "success", "data": [record.to_dict() for record in records]}), 200
+class AdminTransactions(Resource):
+    @jwt_required()
+    def get(self):
+        try:
+            admin_id = int(get_jwt_identity())
+        except (TypeError, ValueError):
+            return {
+                "status": "error",
+                "message": "Unauthorized admin access."
+            }, 401
+        try:
+            if db.session.get(Admin, admin_id) is None:
+                return {"status": "error", "message": "Unauthorized admin access."}, 401
+
+            records = Transaction.query.order_by(Transaction.created_at.desc()).all()
+            return {"status": "success", "data": [record.to_dict() for record in records]}, 200
+        except SQLAlchemyError:
+            db.session.rollback()
+            current_app.logger.exception("Failed to retrieve admin transactions")
+            return {"status": "error", "message": "Unable to retrieve transactions."}, 500
+
+
+api.add_resource(AdminTransactions, "/api/admin/transactions")
 
 
 @admin_bp.get("/api/admin/active-users")
