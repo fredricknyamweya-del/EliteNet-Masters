@@ -79,57 +79,90 @@ def list_routers():
     return jsonify({"status": "success", "data": [record.to_dict() for record in records]}), 200
 
 
-@admin_bp.get("/api/admin/plans")
-@require_admin_auth
-def list_plans():
-    records = Package.query.order_by(Package.duration_minutes.asc()).all()
-    return jsonify({
-        "status": "success",
-        "data": [
-            {
-                "id": record.id,
-                "name": record.name,
-                "price": float(record.price) if record.price is not None else 0,
-                "duration_minutes": record.duration_minutes,
-                "is_active": record.is_active,
-            }
-            for record in records
-        ],
-    }), 200
+class AdminPlans(Resource):
+    @jwt_required()
+    def get(self):
+        try:
+            admin_id = int(get_jwt_identity())
+        except (TypeError, ValueError):
+            return {"status": "error", "message": "Unauthorized admin access."}, 401
+
+        try:
+            if db.session.get(Admin, admin_id) is None:
+                return {"status": "error", "message": "Unauthorized admin access."}, 401
+
+            records = Package.query.order_by(Package.duration_minutes.asc()).all()
+            return {
+                "status": "success",
+                "data": [
+                    {
+                        "id": record.id,
+                        "name": record.name,
+                        "price": float(record.price) if record.price is not None else 0,
+                        "duration_minutes": record.duration_minutes,
+                        "is_active": record.is_active,
+                    }
+                    for record in records
+                ],
+            }, 200
+        except SQLAlchemyError:
+            db.session.rollback()
+            current_app.logger.exception("Failed to retrieve admin plans")
+            return {"status": "error", "message": "Unable to retrieve plans."}, 500
 
 
-@admin_bp.patch("/api/admin/plans/<int:plan_id>")
-@require_admin_auth
-def update_plan(plan_id):
-    payload = request.get_json(silent=True) or {}
-    price = payload.get("price")
+class AdminPlan(Resource):
+    @jwt_required()
+    def patch(self, plan_id):
+        try:
+            admin_id = int(get_jwt_identity())
+        except (TypeError, ValueError):
+            return {"status": "error", "message": "Unauthorized admin access."}, 401
 
-    if price is None:
-        return jsonify({"status": "error", "message": "price is required."}), 400
+        try:
+            if db.session.get(Admin, admin_id) is None:
+                return {"status": "error", "message": "Unauthorized admin access."}, 401
 
-    try:
-        normalized_price = Decimal(str(price))
-    except Exception:
-        return jsonify({"status": "error", "message": "price must be numeric."}), 400
+            payload = request.get_json(silent=True) or {}
+            price = payload.get("price")
 
-    plan = Package.query.get(plan_id)
-    if not plan:
-        return jsonify({"status": "error", "message": "Plan not found."}), 404
+            if price is None:
+                return {"status": "error", "message": "price is required."}, 400
+            if not isinstance(price, (int, float)) or isinstance(price, bool):
 
-    plan.price = normalized_price
-    db.session.commit()
+                 return { "status": "error", "message": "Price must be a number." }, 400
 
-    return jsonify({
-        "status": "success",
-        "message": "Plan updated successfully.",
-        "data": {
-            "id": plan.id,
-            "name": plan.name,
-            "price": float(plan.price),
-            "duration_minutes": plan.duration_minutes,
-            "is_active": plan.is_active,
-        },
-    }), 200
+            try:
+                normalized_price = Decimal(str(price))
+            except Exception:
+                return {"status": "error", "message": "price must be numeric."}, 400
+
+            plan = Package.query.get(plan_id)
+            if not plan:
+                return {"status": "error", "message": "Plan not found."}, 404
+
+            plan.price = normalized_price
+            db.session.commit()
+
+            return {
+                "status": "success",
+                "message": "Plan updated successfully.",
+                "data": {
+                    "id": plan.id,
+                    "name": plan.name,
+                    "price": float(plan.price),
+                    "duration_minutes": plan.duration_minutes,
+                    "is_active": plan.is_active,
+                },
+            }, 200
+        except SQLAlchemyError:
+            db.session.rollback()
+            current_app.logger.exception("Failed to update admin plan")
+            return {"status": "error", "message": "Unable to update plan."}, 500
+
+
+api.add_resource(AdminPlans, "/api/admin/plans")
+api.add_resource(AdminPlan, "/api/admin/plans/<int:plan_id>")
 
 
 @admin_bp.post("/api/admin/restart")
