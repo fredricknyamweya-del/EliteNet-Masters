@@ -1,10 +1,5 @@
 from routes import auth, admin ,stkpush ,mpesa_callback,vouchers# Register resources with the shared API.
-# from routes.admin import admin_bp
-# from routes.callback import callback_bp
-# from routes.stkpush import stkpush_bp
-# from routes.mpesa_callback import mpesa_bp
-# from routes.vouchers import vouchers_bp
-
+from routes import packages
 
 __all__ = [
     auth,
@@ -12,4 +7,5 @@ __all__ = [
     stkpush,
     mpesa_callback,
     vouchers,
+    packages,
 ]
