@@ -1,6 +1,6 @@
 "use client";
 
-import GradientButton from "../../components/GradientButton";
+import GradientButton from "../components/GradientButton";
 
 export default function Error({ error, reset }) {
   return (
