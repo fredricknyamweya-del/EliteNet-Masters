@@ -1,17 +1,14 @@
-from flask import Blueprint, current_app, jsonify, request
+from flask import current_app, request
 
 from flask_restful import Resource
 
 from extensions import api, db
 from services.daraja import trigger_stk_push
-# from services.payment_service import (
-#     create_pending_transaction,
-#     expire_stale_pending_transaction,
-#     get_transaction_status,
-# )
-
-
-stkpush_bp = Blueprint("stkpush", __name__)
+from services.payment_service import (
+    create_pending_transaction,
+    expire_stale_pending_transaction,
+    get_transaction_status,
+)
 
 
 class StkPush(Resource):
@@ -150,60 +147,63 @@ class StkPush(Resource):
 api.add_resource(StkPush, "/api/stkpush")
 
 
-@stkpush_bp.get("/api/payment/status/<int:transaction_id>")
-def payment_status(transaction_id):
-    try:
-        transaction = get_transaction_status(transaction_id)
-        if transaction is not None:
-            transaction, _ = expire_stale_pending_transaction(
-                transaction,
-                timeout_minutes=current_app.config[
-                    "MPESA_STK_TIMEOUT_MINUTES"
-                ],
+class PaymentStatus(Resource):
+    def get(self, transaction_id):
+        try:
+            transaction = get_transaction_status(transaction_id)
+            if transaction is not None:
+                transaction, _ = expire_stale_pending_transaction(
+                    transaction,
+                    timeout_minutes=current_app.config[
+                        "MPESA_STK_TIMEOUT_MINUTES"
+                    ],
+                )
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception(
+                "Unable to load payment status for transaction %s", transaction_id
             )
-    except Exception:
-        db.session.rollback()
-        current_app.logger.exception(
-            "Unable to load payment status for transaction %s", transaction_id
-        )
-        return jsonify({
-            "status": "error",
-            "message": "Unable to check payment status.",
-        }), 500
+            return {
+                "status": "error",
+                "message": "Unable to check payment status.",
+            }, 500
 
-    if transaction is None:
-        return jsonify({
-            "status": "error",
-            "message": "Transaction not found.",
-            "transaction_id": transaction_id,
-        }), 404
+        if transaction is None:
+            return {
+                "status": "error",
+                "message": "Transaction not found.",
+                "transaction_id": transaction_id,
+            }, 404
 
-    messages = {
-        "pending": "Payment is pending.",
-        "success": "Payment completed successfully.",
-        "failed": transaction.result_description or "Payment failed.",
-    }
-    response = {
-        "transaction_id": transaction.id,
-        "status": transaction.status,
-        "result_code": transaction.result_code,
-        "result_description": transaction.result_description,
-        "message": messages[transaction.status],
-    }
+        messages = {
+            "pending": "Payment is pending.",
+            "success": "Payment completed successfully.",
+            "failed": transaction.result_description or "Payment failed.",
+        }
+        response = {
+            "transaction_id": transaction.id,
+            "status": transaction.status,
+            "result_code": transaction.result_code,
+            "result_description": transaction.result_description,
+            "message": messages[transaction.status],
+        }
 
-    if transaction.status == "success":
-        response.update({
-            "mpesa_receipt_number": transaction.mpesa_receipt_number,
-            "amount_paid": (
-                str(transaction.amount_paid)
-                if transaction.amount_paid is not None
-                else None
-            ),
-            "paid_at": (
-                transaction.paid_at.isoformat()
-                if transaction.paid_at
-                else None
-            ),
-        })
+        if transaction.status == "success":
+            response.update({
+                "mpesa_receipt_number": transaction.mpesa_receipt_number,
+                "amount_paid": (
+                    str(transaction.amount_paid)
+                    if transaction.amount_paid is not None
+                    else None
+                ),
+                "paid_at": (
+                    transaction.paid_at.isoformat()
+                    if transaction.paid_at
+                    else None
+                ),
+            })
 
-    return jsonify(response), 200
+        return response, 200
+
+
+api.add_resource(PaymentStatus, "/api/payment/status/<int:transaction_id>")
