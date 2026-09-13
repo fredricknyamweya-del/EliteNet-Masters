@@ -1,165 +1,153 @@
 from flask import Blueprint, current_app, jsonify, request
 
-from app.extensions import db
+from flask_restful import Resource
+
+from extensions import api, db
 from services.daraja import trigger_stk_push
-from services.payment_service import (
-    create_pending_transaction,
-    expire_stale_pending_transaction,
-    get_transaction_status,
-)
+# from services.payment_service import (
+#     create_pending_transaction,
+#     expire_stale_pending_transaction,
+#     get_transaction_status,
+# )
 
 
 stkpush_bp = Blueprint("stkpush", __name__)
 
 
-@stkpush_bp.post("/api/stkpush")
-def stkpush():
-    """
-    Initiate STK Push payment request.
-    
-    Expected payload:
-    {
-        "phone_number": "0708419329",  # Kenyan number format
-        "package_id": 1,                # ID of the package/plan to purchase
-        "amount": 100                   # Amount in KES (optional, derived from package if not provided)
-    }
-    """
-    try:
-        payload = request.get_json(silent=True) or {}
-        
-        # Validate required fields
-        phone_number = payload.get("phone_number")
-        package_id = payload.get("package_id")
-        amount = payload.get("amount")
-        
-        if not phone_number:
-            return jsonify({
-                "status": "error",
-                "message": "Phone number is required."
-            }), 400
-        
-        if not package_id:
-            return jsonify({
-                "status": "error",
-                "message": "Package ID is required."
-            }), 400
-        
-        if amount is None:
-            return jsonify({
-                "status": "error",
-                "message": "Amount is required."
-            }), 400
-        
-        # Validate amount is a number and positive
+class StkPush(Resource):
+    def post(self):
+        """
+        Initiate STK Push payment request.
+
+        Expected payload:
+        {
+            "phone_number": "0708419329",  # Kenyan number format
+            "package_id": 1,                # ID of the package/plan to purchase
+        }
+        """
         try:
-            amount = float(amount)
-            if amount <= 0:
-                return jsonify({
+            payload = request.get_json(silent=True) or {}
+            if not isinstance(payload, dict):
+                return {"status": "error", "message": "JSON body must be an object."}, 400
+
+            # Validate required fields
+            phone_number = payload.get("phone_number")
+            package_id = payload.get("package_id")
+           
+
+            if not phone_number:
+                return {
                     "status": "error",
-                    "message": "Amount must be greater than 0."
-                }), 400
-            if amount > 500000:  # Set reasonable max limit
-                return jsonify({
+                    "message": "Phone number is required."
+                }, 400
+
+            if not package_id:
+                return {
                     "status": "error",
-                    "message": "Amount exceeds maximum limit of 500,000."
-                }), 400
-        except (ValueError, TypeError):
-            return jsonify({
-                "status": "error",
-                "message": "Amount must be a valid number."
-            }), 400
-        
-        # Validate package exists
-        try:
-            from models.models import Package
-            package = Package.query.get(package_id)
-            if not package:
-                return jsonify({
+                    "message": "Package ID is required."
+                }, 400
+
+
+            # Validate package exists
+            try:
+                from models.models import Package
+                package = Package.query.get(package_id)
+                if not package:
+                    return {
+                        "status": "error",
+                        "message": "Package not found."
+                    }, 404
+                amount = package.price
+                if amount is None:
+                    return {
+                        "status": "error",
+                        "message": "Package price is not configured."
+                    }, 500
+            except Exception as e:
+                current_app.logger.exception(f"Error validating package: {str(e)}")
+                return {
                     "status": "error",
-                    "message": "Package not found."
-                }), 404
+                    "message": "An error occurred while validating the package."
+                }, 500
+
+            # Validate and normalize phone number
+            from services.daraja import validate_phone_number
+            is_valid, normalized_phone, error_msg = validate_phone_number(phone_number)
+            if not is_valid:
+                return {
+                    "status": "error",
+                    "message": error_msg
+                }, 400
+
+            # Trigger STK Push with Daraja
+            stk_response, stk_status_code = trigger_stk_push(normalized_phone, amount)
+
+            # If STK Push failed, return error immediately (no transaction created)
+            if stk_status_code != 200:
+                return stk_response, stk_status_code
+
+            # Extract checkout_request_id from successful response
+            checkout_request_id = stk_response.get("checkout_request_id")
+            merchant_request_id = stk_response.get("merchant_request_id")
+
+            if not checkout_request_id:
+                current_app.logger.error(
+                    "STK Push succeeded but no checkout_request_id returned"
+                )
+                return {
+                    "status": "error",
+                    "message": "Payment request failed. Please try again."
+                }, 500
+
+            # Create pending transaction to match callback
+            try:
+                transaction, created = create_pending_transaction(
+                    phone_number=normalized_phone,
+                    package_id=package_id,
+                    checkout_request_id=checkout_request_id,
+                    merchant_request_id=merchant_request_id,
+                    client_id=None,  # Client is identified by phone_number in callback
+                )
+
+                current_app.logger.info(
+                    f"Pending transaction created - ID: {transaction.id}, "
+                    f"CheckoutRequestID: {checkout_request_id}, "
+                    f"Phone: {normalized_phone}"
+                )
+
+                # Return success response with transaction details
+                return {
+                    "status": "pending",
+                    "message": "STK push request sent successfully",
+                    "transaction_id": transaction.id,
+                    "checkout_request_id": checkout_request_id,
+                    "merchant_request_id": merchant_request_id,
+                    "phone_number": stk_response.get("phone_number"),
+                    "amount": stk_response.get("amount"),
+                }, 200
+
+            except Exception as e:
+                current_app.logger.exception(
+                    f"Error creating pending transaction for CheckoutRequestID "
+                    f"{checkout_request_id}: {str(e)}"
+                )
+                # Even if transaction creation fails, STK was sent to user
+                # Log this for manual reconciliation
+                return {
+                    "status": "error",
+                    "message": "STK push sent but unable to track request. "
+                              "Please contact support."
+                }, 500
+
         except Exception as e:
-            current_app.logger.exception(f"Error validating package: {str(e)}")
-            return jsonify({
+            current_app.logger.exception("Unexpected error in STK Push endpoint")
+            return {
                 "status": "error",
-                "message": "An error occurred while validating the package."
-            }), 500
-        
-        # Validate and normalize phone number
-        from services.daraja import validate_phone_number
-        is_valid, normalized_phone, error_msg = validate_phone_number(phone_number)
-        if not is_valid:
-            return jsonify({
-                "status": "error",
-                "message": error_msg
-            }), 400
-        
-        # Trigger STK Push with Daraja
-        stk_response, stk_status_code = trigger_stk_push(normalized_phone, amount)
-        
-        # If STK Push failed, return error immediately (no transaction created)
-        if stk_status_code != 200:
-            return jsonify(stk_response), stk_status_code
-        
-        # Extract checkout_request_id from successful response
-        checkout_request_id = stk_response.get("checkout_request_id")
-        merchant_request_id = stk_response.get("merchant_request_id")
-        
-        if not checkout_request_id:
-            current_app.logger.error(
-                "STK Push succeeded but no checkout_request_id returned"
-            )
-            return jsonify({
-                "status": "error",
-                "message": "Payment request failed. Please try again."
-            }), 500
-        
-        # Create pending transaction to match callback
-        try:
-            transaction, created = create_pending_transaction(
-                phone_number=normalized_phone,
-                package_id=package_id,
-                checkout_request_id=checkout_request_id,
-                merchant_request_id=merchant_request_id,
-                client_id=None,  # Client is identified by phone_number in callback
-            )
-            
-            current_app.logger.info(
-                f"Pending transaction created - ID: {transaction.id}, "
-                f"CheckoutRequestID: {checkout_request_id}, "
-                f"Phone: {normalized_phone}"
-            )
-            
-            # Return success response with transaction details
-            return jsonify({
-                "status": "pending",
-                "message": "STK push request sent successfully",
-                "transaction_id": transaction.id,
-                "checkout_request_id": checkout_request_id,
-                "merchant_request_id": merchant_request_id,
-                "phone_number": stk_response.get("phone_number"),
-                "amount": stk_response.get("amount"),
-            }), 200
-            
-        except Exception as e:
-            current_app.logger.exception(
-                f"Error creating pending transaction for CheckoutRequestID "
-                f"{checkout_request_id}: {str(e)}"
-            )
-            # Even if transaction creation fails, STK was sent to user
-            # Log this for manual reconciliation
-            return jsonify({
-                "status": "error",
-                "message": "STK push sent but unable to track request. "
-                          "Please contact support."
-            }), 500
-        
-    except Exception as e:
-        current_app.logger.exception("Unexpected error in STK Push endpoint")
-        return jsonify({
-            "status": "error",
-            "message": "An error occurred while processing the payment request."
-        }), 500
+                "message": "An error occurred while processing the payment request."
+            }, 500
+
+
+api.add_resource(StkPush, "/api/stkpush")
 
 
 @stkpush_bp.get("/api/payment/status/<int:transaction_id>")

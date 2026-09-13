@@ -1,4 +1,4 @@
-from routes import auth, admin  # Register resources with the shared API.
+from routes import auth, admin ,stkpush # Register resources with the shared API.
 # from routes.admin import admin_bp
 # from routes.callback import callback_bp
 # from routes.stkpush import stkpush_bp
@@ -9,4 +9,5 @@ from routes import auth, admin  # Register resources with the shared API.
 __all__ = [
     auth,
     admin,
+    stkpush,
 ]
