@@ -1,7 +1,7 @@
 "use client";
 
-import CyberpunkBackground from "../components/CyberpunkBackground";
-import GradientButton from "../components/GradientButton";
+import CyberpunkBackground from "../../components/CyberpunkBackground";
+import GradientButton from "../../components/GradientButton";
 
 export default function GlobalError({ error, reset }) {
   return (
