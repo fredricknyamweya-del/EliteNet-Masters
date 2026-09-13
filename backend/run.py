@@ -6,14 +6,14 @@ from flask_cors import CORS
 
 from extensions import api, bcrypt, db, jwt, migrate
 from config import config_by_name
-from routes import __all__
+from app.routes import __all__
 
 
 def _ensure_default_admin(app):
 	with app.app_context():
 		db.create_all()
 
-		from models.models import Admin
+		from app.models import Admin
 
 		admin = Admin.query.filter_by(username="admin").first()
 		if admin is None:
@@ -28,7 +28,7 @@ def _ensure_default_admin(app):
 
 def _ensure_default_packages(app):
 	with app.app_context():
-		from models.models import Package
+		from app.models import Package
 
 		default_packages = [
 			("30 Minutes", Decimal("5.00"), 30),
@@ -110,15 +110,13 @@ def create_app(config_name=None):
 	if migrate is not None:
 		migrate.init_app(app, db)
 	# Ensure model metadata is loaded before db.create_all or migrations.
-	from models import models as _models  # noqa: F401
+	
+		from app import models as _models  # noqa: F401
 
-	# for blueprint in ALL_BLUEPRINTS:
-	# 	app.register_blueprint(blueprint)
-
-	_ensure_default_admin(app)
-	_ensure_default_packages(app)
-	_setup_session_expiry_scheduler(app)
-	return app
+		_ensure_default_admin(app)
+		_ensure_default_packages(app)
+		_setup_session_expiry_scheduler(app)
+		return app
 
 
 app = create_app()

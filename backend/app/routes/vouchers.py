@@ -8,7 +8,7 @@ from flask_restful import Resource
 from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import api, db
-from models.models import Admin, Package, Voucher
+from app.models import Admin, Package, Voucher
 
 
 def _voucher_code():

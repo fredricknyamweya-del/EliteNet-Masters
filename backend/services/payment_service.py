@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 from sqlalchemy.exc import IntegrityError
 
 from extensions import db
-from models.models import Client, Package, Transaction
+from app.models import Client, Package, Transaction
 
 
 def create_pending_transaction(

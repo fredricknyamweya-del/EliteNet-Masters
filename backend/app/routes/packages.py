@@ -3,7 +3,7 @@ from flask_restful import Resource
 from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import api, db
-from models.models import Package
+from app.models import Package
 
 
 class Packages(Resource):

@@ -47,7 +47,7 @@ class StkPush(Resource):
 
             # Validate package exists
             try:
-                from models.models import Package
+                from app.models import Package
                 package = Package.query.get(package_id)
                 if not package:
                     return {

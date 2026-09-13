@@ -3,7 +3,7 @@ from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_requir
 from flask_restful import Resource
 
 from extensions import api, db
-from models.models import Admin
+from app.models import Admin
 
 
 
