@@ -1,5 +1,5 @@
 import { Poppins } from "next/font/google";
-import "../styles/globals.css";
+import "../../styles/globals.css"; // fixed path
 
 // Load the Poppins font for the entire frontend
 const poppins = Poppins({
@@ -15,7 +15,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${poppins.variable}`} suppressHydrationWarning>
+    <html lang="en" className={poppins.variable} suppressHydrationWarning>
       <body style={{ margin: 0, padding: 0 }}>{children}</body>
     </html>
   );
