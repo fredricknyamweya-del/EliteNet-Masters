@@ -1,11 +1,4 @@
-import { Poppins } from "next/font/google";
 import "../styles/globals.css";
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-poppins",
-});
 
 export const metadata = {
   title: "EliteNet Masters WiFi",
@@ -14,7 +7,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={poppins.variable} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body style={{ margin: 0, padding: 0 }}>{children}</body>
     </html>
   );
