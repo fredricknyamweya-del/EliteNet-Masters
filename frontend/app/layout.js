@@ -3,6 +3,10 @@ import "../styles/globals.css";
 export const metadata = {
   title: "EliteNet Masters WiFi",
   description: "WiFi hotspot billing portal",
+  icons: {
+    icon: "/icon.svg",
+  },
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({ children }) {
