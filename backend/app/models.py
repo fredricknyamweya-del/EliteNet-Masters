@@ -1,9 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
 
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
 
-from app.extensions import db
+from extensions import bcrypt, db
 
 
 class Admin(db.Model):
@@ -20,11 +20,22 @@ class Admin(db.Model):
         onupdate=datetime.utcnow,
     )
 
+    def check_password(self, password):
+        if not isinstance(password, str) or not password or not self.password_hash:
+            return False
+        try:
+            if self.password_hash.startswith(("scrypt:", "pbkdf2:")):
+                # Keep existing accounts usable without rehashing during login.
+                return check_password_hash(self.password_hash, password)
+            return bcrypt.check_password_hash(self.password_hash, password)
+        except (ValueError, TypeError):
+            return False
+
     def verify_password(self, password):
-        return check_password_hash(self.password_hash, password)
+        return self.check_password(password)
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
 
     def to_dict(self):
         return {
