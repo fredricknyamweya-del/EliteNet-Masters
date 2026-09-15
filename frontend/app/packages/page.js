@@ -13,10 +13,12 @@ import { triggerStkPush, checkPaymentStatus, reconnect as reconnectSession } fro
 const PACKAGES = [
   { id: 1, label: "30minutes", price: 5 },
   { id: 2, label: "1hour",     price: 10 },
-  { id: 3, label: "3hours",    price: 30 },
-  { id: 4, label: "6hours",    price: 60 },
-  { id: 5, label: "24hours",   price: 100 },
-  { id: 6, label: "Weekly",    price: 300 },
+  { id: 3, label: "2hours",    price: 30 },
+  { id: 3, label: "4hours",    price: 20 },
+  { id: 4, label: "6hours",    price: 40 },
+  { id: 5, label: "24hours",   price: 80 },
+  { id: 6, label: "Weekly",    price: 200 },
+  { id: 7, label:  "Monthly",  price: 400 }
 ];
 
 export default function PackagesPage() {
@@ -179,7 +181,7 @@ export default function PackagesPage() {
                 </li>
               </ol>
               <p className="text-[#e0f2ec] text-xs text-center mt-3">
-                (Customer care: 0708419329)
+                (Customer care: 0757775669)
               </p>
             </GlassCard>
 
