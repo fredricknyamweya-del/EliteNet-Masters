@@ -3,14 +3,17 @@ from datetime import timedelta
 
 
 def _get_database_uri():
-    database_url = os.getenv("DATABASE_URL")
+    database_url = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
     if database_url:
         return database_url.replace("postgres://", "postgresql://", 1)
 
+    default_postgres_uri = (
+        "postgresql://postgres:postgres@localhost:5432/elitenet_masters"
+    )
     if os.getenv("FLASK_ENV") == "production":
-        return "postgresql://postgres:postgres@localhost:5432/wifi_hotspot_billing"
+        return os.getenv("POSTGRES_DATABASE_URL", default_postgres_uri)
 
-    return "sqlite:///elitenet_masters.db"
+    return os.getenv("POSTGRES_DATABASE_URL", default_postgres_uri)
 
 
 class Config:
