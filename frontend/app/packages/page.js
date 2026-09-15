@@ -10,15 +10,15 @@ import PaymentStatus from "../../components/PaymentStatus";
 import LoginForm from "../../components/LoginForm";
 import { triggerStkPush, checkPaymentStatus, reconnect as reconnectSession } from "../../lib/api";
 
-const PACKAGES = [
+export const PACKAGES = [
   { id: 1, label: "30minutes", price: 5 },
   { id: 2, label: "1hour",     price: 10 },
   { id: 3, label: "2hours",    price: 20 },
-  { id: 3, label: "4hours",    price: 35 },
-  { id: 4, label: "6hours",    price: 45 },
-  { id: 5, label: "24hours",   price: 55 },
-  { id: 6, label: "Weekly",    price: 195 },
-  { id: 7, label:  "Monthly",  price: 575 }
+  { id: 4, label: "4hours",    price: 35 },
+  { id: 5, label: "6hours",    price: 45 },
+  { id: 6, label: "24hours",   price: 55 },
+  { id: 7, label: "Weekly",    price: 195 },
+  { id: 8, label: "Monthly",   price: 575 }
 ];
 
 export default function PackagesPage() {
