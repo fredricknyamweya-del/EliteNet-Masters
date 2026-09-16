@@ -16,14 +16,20 @@ def _get_database_uri(environment_names, default_database):
 
 
 class Config:
-    SECRET_KEY = os.getenv("SECRET_KEY", "change-this-in-production")
+    SECRET_KEY = os.getenv("SECRET_KEY") or "development-only-secret-change-me"
+    JWT_SECRET_KEY = SECRET_KEY
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = _get_database_uri(
         ("DATABASE_URL", "POSTGRES_URL", "POSTGRES_DATABASE_URL"),
         "elitenet_masters",
     )
-    ADMIN_TOKEN_EXP_MINUTES = int(os.getenv("ADMIN_TOKEN_EXP_MINUTES", "480"))
+    ADMIN_TOKEN_EXP_MINUTES = int(os.getenv("ADMIN_TOKEN_EXP_MINUTES", "30"))
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=ADMIN_TOKEN_EXP_MINUTES)
+    JWT_TOKEN_LOCATION = ["cookies"]
+    JWT_COOKIE_CSRF_PROTECT = True
+    JWT_COOKIE_SAMESITE = "Lax"
+    JWT_COOKIE_SECURE = os.getenv("FLASK_ENV") == "production"
+    JWT_ACCESS_COOKIE_PATH = "/"
     MPESA_STK_TIMEOUT_MINUTES = int(
         os.getenv("MPESA_STK_TIMEOUT_MINUTES", "5")
     )
@@ -43,6 +49,11 @@ class TestingConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+
+    if os.getenv("FLASK_ENV") == "production" and (
+        not os.getenv("SECRET_KEY") or len(os.getenv("SECRET_KEY", "")) < 32
+    ):
+        raise RuntimeError("Production SECRET_KEY must be set and at least 32 characters long")
 
 
 config_by_name = {

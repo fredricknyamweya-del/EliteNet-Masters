@@ -130,8 +130,10 @@ Create `.env` in `backend/` (never commit this):
 
 ```env
 FLASK_ENV=development
-SECRET_KEY=replace_with_a_long_random_string
-ADMIN_TOKEN_EXP_MINUTES=480
+SECRET_KEY=replace_with_a_random_secret_at_least_32_characters
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=replace_with_a_strong_password
+ADMIN_TOKEN_EXP_MINUTES=30
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/elitenet_masters
 TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/elitenet_masters_test
 
@@ -148,8 +150,9 @@ ROUTEROS_PASSWORD=
 ## API Endpoints
 Base URL: `http://127.0.0.1:5555`
 
-Protected endpoints require the JWT returned by the admin login:
-`Authorization: Bearer <access_token>`.
+Protected endpoints use the HttpOnly JWT cookie set by the admin login. Unsafe
+requests also require the `X-CSRF-TOKEN` header copied from the readable
+`csrf_access_token` cookie.
 
 | Method | Endpoint | Auth | Purpose |
 |--------|----------|------|---------|
@@ -165,8 +168,15 @@ Protected endpoints require the JWT returned by the admin login:
 | `GET` | `/api/admin/transactions` | Admin JWT | List transactions |
 | `GET` | `/api/admin/active-users` | Admin JWT | List active sessions |
 | `GET` | `/api/admin/routers` | Admin JWT | List routers |
+| `GET` | `/api/admin/network-stats` | Admin JWT | Read PostgreSQL-backed session usage metrics |
+| `GET` | `/api/admin/sessions?status=all` | Admin JWT | List session history; use `active` or `expired` as the status filter |
+| `GET` | `/api/admin/announcement` | Admin JWT | Read the active portal announcement |
+| `POST` | `/api/admin/announcement` | Admin JWT | Publish a portal announcement |
+| `DELETE` | `/api/admin/announcement` | Admin JWT | Clear the latest announcement |
 | `GET` | `/api/admin/plans` | Admin JWT | List all plans |
+| `POST` | `/api/admin/plans` | Admin JWT | Create a plan |
 | `PATCH` | `/api/admin/plans/<plan_id>` | Admin JWT | Update a plan price |
+| `DELETE` | `/api/admin/plans/<plan_id>` | Admin JWT | Archive a plan |
 | `POST` | `/api/admin/restart` | Admin JWT | Mark a router as restarting |
 
 ### Common Request Bodies

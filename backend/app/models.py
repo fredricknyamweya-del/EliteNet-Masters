@@ -49,6 +49,13 @@ class Admin(db.Model):
         return f"<Admin id={self.id} username={self.username}>"
 
 
+class RevokedToken(db.Model):
+    __tablename__ = "revoked_tokens"
+
+    jti = db.Column(db.String(36), primary_key=True)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+
+
 class Client(db.Model):
     __tablename__ = "clients"
 
@@ -172,6 +179,7 @@ class Transaction(db.Model):
             "id": self.id,
             "phone_number": self.phone_number,
             "package_id": self.package_id,
+            "package": self.package.name if self.package else None,
             "client_id": self.client_id,
             "status": self.status,
             "checkout_request_id": self.checkout_request_id,
@@ -408,3 +416,25 @@ class Session(db.Model):
             f"<Session id={self.id} transaction_id={self.transaction_id} "
             f"phone_number={self.phone_number} is_active={self.is_active}>"
         )
+
+
+class Announcement(db.Model):
+    __tablename__ = "announcements"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    content = db.Column(db.String(200), nullable=False)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
+    )
+    created_by = db.Column(
+        db.Integer, db.ForeignKey("admins.id", ondelete="SET NULL"), nullable=True
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "content": self.content,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

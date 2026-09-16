@@ -6,17 +6,7 @@ import CyberpunkBackground from "../../../components/CyberpunkBackground";
 import GlassCard from "../../../components/GlassCard";
 import NeonInput from "../../../components/NeonInput";
 import GradientButton from "../../../components/GradientButton";
-import { getIssuedVouchers } from "../../../lib/vouchers";
-import { generateVoucher } from "../../../lib/api";
-
-const PACKAGES = [
-  { id: 1, label: "30 Minutes", duration: 30 },
-  { id: 2, label: "3 Hours",    duration: 180 },
-  { id: 3, label: "6 Hours",    duration: 360 },
-  { id: 4, label: "24 Hours",   duration: 1440 },
-  { id: 5, label: "Weekly",     duration: 10080 },
-  { id: 6, label: "Monthly",    duration: 43200 },
-];
+import { generateVoucher, getPlans } from "../../../lib/api";
 
 export default function IssueVoucherPage() {
   const router = useRouter();
@@ -26,9 +16,12 @@ export default function IssueVoucherPage() {
   const [generating, setGenerating] = useState(false);
   const [issuedVouchers, setIssuedVouchers] = useState([]);
   const [error, setError] = useState("");
+  const [packages, setPackages] = useState([]);
 
   useEffect(() => {
-    setIssuedVouchers(getIssuedVouchers());
+    getPlans()
+      .then((result) => setPackages(result.data || []))
+      .catch((requestError) => setError(requestError.message || "Failed to load packages."));
   }, []);
 
   async function handleGenerate() {
@@ -89,7 +82,7 @@ export default function IssueVoucherPage() {
 
           {/* Package selection */}
           <div className="grid grid-cols-2 gap-2">
-            {PACKAGES.map((pkg) => (
+            {packages.map((pkg) => (
               <button
                 key={pkg.id}
                 onClick={() => setSelectedPackage(pkg)}
@@ -99,7 +92,7 @@ export default function IssueVoucherPage() {
                     : "border-[#06B6D4]/30 text-white hover:border-[#06B6D4]"
                 }`}
               >
-                {pkg.label}
+                {pkg.name}
               </button>
             ))}
           </div>

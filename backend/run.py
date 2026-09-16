@@ -15,14 +15,18 @@ def _ensure_default_admin(app):
 
 		from app.models import Admin
 
-		admin = Admin.query.filter_by(username="admin").first()
+		admin_username = os.getenv("ADMIN_USERNAME", "admin")
+		admin_password = os.getenv("ADMIN_PASSWORD", "Admin@2026")
+		if os.getenv("FLASK_ENV") == "production" and not os.getenv("ADMIN_PASSWORD"):
+			raise RuntimeError("ADMIN_PASSWORD must be set in production")
+		admin = Admin.query.filter_by(username=admin_username).first()
 		if admin is None:
-			admin = Admin(username="admin")
-			admin.set_password("Admin@2026")
+			admin = Admin(username=admin_username)
+			admin.set_password(admin_password)
 			db.session.add(admin)
 			db.session.commit()
 		elif not admin.password_hash:
-			admin.set_password("Admin@2026")
+			admin.set_password(admin_password)
 			db.session.commit()
 
 
@@ -96,7 +100,11 @@ def create_app(config_name=None):
 	config_object = config_by_name.get(selected_config, config_by_name["development"])
 	app.config.from_object(config_object)
 
-	CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
+	CORS(
+		app,
+		resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}},
+		supports_credentials=True,
+	)
 
 	db.init_app(app)
 	bcrypt.init_app(app)
@@ -107,6 +115,11 @@ def create_app(config_name=None):
 	# Ensure model metadata is loaded before db.create_all or migrations.
 	
 		from app import models as _models  # noqa: F401
+		from app.models import RevokedToken
+
+		@jwt.token_in_blocklist_loader
+		def _is_revoked(jwt_header, jwt_payload):
+			return db.session.get(RevokedToken, jwt_payload["jti"]) is not None
 
 		_ensure_default_admin(app)
 		_ensure_default_packages(app)
