@@ -1,22 +1,9 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5555";
 
-function canUseStorage() {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-}
-
-function getAdminToken() {
-  if (!canUseStorage()) return "";
-  return window.localStorage.getItem("admin_access_token") || "";
-}
-
-export function setAdminToken(token) {
-  if (!canUseStorage() || !token) return;
-  window.localStorage.setItem("admin_access_token", token);
-}
-
-export function clearAdminToken() {
-  if (!canUseStorage()) return;
-  window.localStorage.removeItem("admin_access_token");
+function getCookie(name) {
+  if (typeof document === "undefined") return "";
+  const value = document.cookie.split("; ").find((item) => item.startsWith(`${name}=`));
+  return value ? decodeURIComponent(value.split("=").slice(1).join("=")) : "";
 }
 
 async function safeJson(response) {
@@ -44,14 +31,15 @@ async function request(path, { method = "GET", body, auth = false, query } = {})
   }
 
   const headers = { "Content-Type": "application/json" };
-  if (auth) {
-    const token = getAdminToken();
-    if (token) headers.Authorization = `Bearer ${token}`;
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    const csrfToken = getCookie("csrf_access_token");
+    if (csrfToken) headers["X-CSRF-TOKEN"] = csrfToken;
   }
 
   const response = await fetch(`${API_URL}${path}${toQueryString(query)}`, {
     method,
     headers,
+    credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
   });
 
@@ -70,10 +58,6 @@ export async function login(username, password) {
       body: { username, password },
     });
 
-    if (result.access_token) {
-      setAdminToken(result.access_token);
-    }
-
     return result;
   } catch {
     return {
@@ -81,6 +65,10 @@ export async function login(username, password) {
       message: "Invalid username or password",
     };
   }
+}
+
+export async function logout() {
+  return await request("/api/auth/logout", { method: "POST", auth: true });
 }
 
 export async function triggerStkPush(phoneNumber, packageId) {

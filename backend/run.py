@@ -100,7 +100,11 @@ def create_app(config_name=None):
 	config_object = config_by_name.get(selected_config, config_by_name["development"])
 	app.config.from_object(config_object)
 
-	CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
+	CORS(
+		app,
+		resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}},
+		supports_credentials=True,
+	)
 
 	db.init_app(app)
 	bcrypt.init_app(app)
