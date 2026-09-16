@@ -32,10 +32,6 @@ Thumbs.db
 .idea/
 *.swp
 
-# Database files
-*.sqlite3
-*.db
-
 # Testing
 coverage/
 
