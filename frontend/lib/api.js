@@ -71,6 +71,14 @@ export async function logout() {
   return await request("/api/auth/logout", { method: "POST", auth: true });
 }
 
+export async function clearAdminToken() {
+  try {
+    await logout();
+  } catch {
+    // The browser will discard expired cookies even if the server is unavailable.
+  }
+}
+
 export async function triggerStkPush(phoneNumber, packageId) {
   return await request("/api/stkpush", {
     method: "POST",
