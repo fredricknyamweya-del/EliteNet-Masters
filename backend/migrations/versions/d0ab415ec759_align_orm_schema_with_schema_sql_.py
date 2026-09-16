@@ -99,7 +99,7 @@ def upgrade():
         )
 
     for table_name, constraint_name, referred_table, column_name, ondelete in FOREIGN_KEYS:
-        op.drop_constraint(constraint_name, table_name, type="foreignkey")
+        op.drop_constraint(constraint_name, table_name, type_="foreignkey")
         op.create_foreign_key(
             constraint_name,
             table_name,
@@ -112,7 +112,7 @@ def upgrade():
 
 def downgrade():
     for table_name, constraint_name, referred_table, column_name, _ in FOREIGN_KEYS:
-        op.drop_constraint(constraint_name, table_name, type="foreignkey")
+        op.drop_constraint(constraint_name, table_name, type_="foreignkey")
         op.create_foreign_key(
             constraint_name, table_name, referred_table, [column_name], ["id"]
         )
