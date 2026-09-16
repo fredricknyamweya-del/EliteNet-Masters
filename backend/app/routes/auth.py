@@ -1,14 +1,42 @@
+from collections import defaultdict, deque
+from datetime import datetime, timezone
+
 from flask import jsonify, make_response, request
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
+from flask_jwt_extended import (
+    create_access_token,
+    get_jwt,
+    get_jwt_identity,
+    jwt_required,
+    set_access_cookies,
+    unset_jwt_cookies,
+)
 from flask_restful import Resource
 
 from extensions import api, db
-from app.models import Admin
+from app.models import Admin, RevokedToken
+
+
+_LOGIN_ATTEMPTS = defaultdict(deque)
+_MAX_LOGIN_ATTEMPTS = 5
+_LOGIN_WINDOW_SECONDS = 300
+
+
+def _login_allowed(address):
+    now = datetime.now(timezone.utc).timestamp()
+    attempts = _LOGIN_ATTEMPTS[address]
+    while attempts and now - attempts[0] > _LOGIN_WINDOW_SECONDS:
+        attempts.popleft()
+    if len(attempts) >= _MAX_LOGIN_ATTEMPTS:
+        return False
+    attempts.append(now)
+    return True
 
 
 
 class Login(Resource):
     def post(self):
+        if not _login_allowed(request.remote_addr or "unknown"):
+            return {"status": "error", "message": "Too many login attempts. Try again later."}, 429
         payload = request.get_json(silent=True)
         if payload is None:
             return {"status": "error", "message": "A valid JSON body is required."}, 400
@@ -33,12 +61,11 @@ class Login(Resource):
             )
 
         token = create_access_token(identity=str(admin.id))
-        return make_response(
+        response = make_response(
             jsonify(
                 {
                     "status": "success",
                     "message": "Login successful",
-                    "access_token": token,
                     "admin": {
                         "id": admin.id,
                         "username": admin.username,
@@ -47,6 +74,24 @@ class Login(Resource):
             ),
             200,
         )
+        set_access_cookies(response, token)
+        return response
+
+
+class Logout(Resource):
+    @jwt_required()
+    def post(self):
+        token = get_jwt()
+        db.session.add(
+            RevokedToken(
+                jti=token["jti"],
+                expires_at=datetime.fromtimestamp(token["exp"], tz=timezone.utc),
+            )
+        )
+        db.session.commit()
+        response = make_response(jsonify({"status": "success", "message": "Logged out."}), 200)
+        unset_jwt_cookies(response)
+        return response
 
 
 class ChangePassword(Resource):
@@ -77,4 +122,5 @@ class ChangePassword(Resource):
 
 
 api.add_resource(Login, "/api/auth/login")
+api.add_resource(Logout, "/api/auth/logout")
 api.add_resource(ChangePassword, "/api/admin/password/change")
