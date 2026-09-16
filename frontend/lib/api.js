@@ -1,6 +1,6 @@
 import { addIssuedVoucher, redeemVoucher } from "./vouchers";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+Iconst API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5555";
 
 function canUseStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
