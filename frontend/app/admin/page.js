@@ -276,16 +276,6 @@ export default function AdminPage() {
         {/* Actions */}
         <div className="mt-8 flex flex-wrap gap-3">
           <button
-            onClick={() => router.push("/admin/plans")}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white shadow-md transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
-            style={{
-              background:
-                "linear-gradient(135deg, #2563EB 0%, #06B6D4 100%)",
-            }}
-          >
-            Add Package
-          </button>
-          <button
             onClick={() => router.push("/admin/reports")}
             className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[#fbfbfb] bg-transparent border-2 border-[#dfeaea] hover:bg-[#22b4af]/10 transition-all duration-200 active:scale-[0.98]"
           >
