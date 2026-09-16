@@ -128,6 +128,14 @@ export async function getPlans() {
   return await request("/api/admin/plans", { auth: true });
 }
 
+export async function createPlan(name, price, durationMinutes) {
+  return await request("/api/admin/plans", {
+    method: "POST",
+    auth: true,
+    body: { name, price, duration_minutes: durationMinutes },
+  });
+}
+
 export async function updatePlan(planId, price) {
   try {
     return await request(`/api/admin/plans/${planId}`, {
@@ -141,6 +149,13 @@ export async function updatePlan(planId, price) {
       message: error?.message || "Unable to update plan.",
     };
   }
+}
+
+export async function deletePlan(planId) {
+  return await request(`/api/admin/plans/${planId}`, {
+    method: "DELETE",
+    auth: true,
+  });
 }
 
 export async function getRouters() {
@@ -191,4 +206,11 @@ export async function publishAnnouncement(message, expiryKey = "1h") {
 
 export async function getActiveAnnouncement() {
   return await request("/api/admin/announcement", { auth: true });
+}
+
+export async function deleteAnnouncement() {
+  return await request("/api/admin/announcement", {
+    method: "DELETE",
+    auth: true,
+  });
 }

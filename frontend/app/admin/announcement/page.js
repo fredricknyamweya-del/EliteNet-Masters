@@ -7,7 +7,7 @@ import CyberpunkBackground from "../../../components/CyberpunkBackground";
 import GlassCard from "../../../components/GlassCard";
 import NeonInput from "../../../components/NeonInput";
 import GradientButton from "../../../components/GradientButton";
-import { publishAnnouncement, getActiveAnnouncement } from "../../../lib/api";
+import { publishAnnouncement, getActiveAnnouncement, deleteAnnouncement } from "../../../lib/api";
 
 const EXPIRY_OPTIONS = [
   { key: "1h", label: "1 hour" },
@@ -24,6 +24,7 @@ export default function AnnouncementPage() {
   const [activeAnnouncement, setActiveAnnouncement] = useState(null);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -60,6 +61,19 @@ export default function AnnouncementPage() {
 
   function handleClearPreview() {
     setMessage("");
+  }
+
+  async function handleClearAnnouncement() {
+    setClearing(true);
+    setError("");
+    try {
+      await deleteAnnouncement();
+      setActiveAnnouncement(null);
+    } catch (requestError) {
+      setError(requestError.message || "Failed to clear announcement.");
+    } finally {
+      setClearing(false);
+    }
   }
 
   return (
@@ -144,6 +158,9 @@ export default function AnnouncementPage() {
                 <div className="space-y-2">
                   <p className="text-base leading-relaxed text-white">{activeAnnouncement.content}</p>
                   <p className="text-xs text-white/60">Expires at: {activeAnnouncement.expires_at || 'Until cleared'}</p>
+                  <button type="button" onClick={handleClearAnnouncement} disabled={clearing} className="text-xs text-red-300 underline">
+                    {clearing ? "Clearing..." : "Clear announcement"}
+                  </button>
                 </div>
               ) : (
                 <p className="text-sm text-white/60">No active announcement</p>

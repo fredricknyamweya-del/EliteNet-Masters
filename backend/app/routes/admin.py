@@ -130,6 +130,39 @@ class AdminPlans(Resource):
             current_app.logger.exception("Failed to retrieve admin plans")
             return {"status": "error", "message": "Unable to retrieve plans."}, 500
 
+    @jwt_required()
+    def post(self):
+        if _admin_id() is None:
+            return {"status": "error", "message": "Unauthorized admin access."}, 401
+        payload = request.get_json(silent=True) or {}
+        name = payload.get("name", "").strip()
+        price = payload.get("price")
+        duration_minutes = payload.get("duration_minutes")
+        if not name or len(name) > 100:
+            return {"status": "error", "message": "A plan name is required."}, 400
+        try:
+            normalized_price = Decimal(str(price))
+            normalized_duration = int(duration_minutes)
+            if normalized_price <= 0 or normalized_duration <= 0:
+                raise ValueError
+        except (TypeError, ValueError, ArithmeticError):
+            return {"status": "error", "message": "Price and duration must be positive numbers."}, 400
+        plan = Package(
+            name=name,
+            price=normalized_price,
+            duration_minutes=normalized_duration,
+            is_active=True,
+        )
+        db.session.add(plan)
+        db.session.commit()
+        return {"status": "success", "data": {
+            "id": plan.id,
+            "name": plan.name,
+            "price": float(plan.price),
+            "duration_minutes": plan.duration_minutes,
+            "is_active": plan.is_active,
+        }}, 201
+
 
 class AdminPlan(Resource):
     @jwt_required()
@@ -179,6 +212,17 @@ class AdminPlan(Resource):
             db.session.rollback()
             current_app.logger.exception("Failed to update admin plan")
             return {"status": "error", "message": "Unable to update plan."}, 500
+
+    @jwt_required()
+    def delete(self, plan_id):
+        if _admin_id() is None:
+            return {"status": "error", "message": "Unauthorized admin access."}, 401
+        plan = db.session.get(Package, plan_id)
+        if plan is None:
+            return {"status": "error", "message": "Plan not found."}, 404
+        plan.is_active = False
+        db.session.commit()
+        return {"status": "success", "message": "Plan archived.", "data": {"id": plan.id}}, 200
 
 
 api.add_resource(AdminPlans, "/api/admin/plans")
@@ -327,6 +371,17 @@ class AdminAnnouncement(Resource):
         db.session.add(announcement)
         db.session.commit()
         return {"status": "success", "message": "Announcement published", "data": announcement.to_dict()}, 201
+
+    @jwt_required()
+    def delete(self):
+        if _admin_id() is None:
+            return {"status": "error", "message": "Unauthorized admin access."}, 401
+        announcement = Announcement.query.order_by(Announcement.created_at.desc()).first()
+        if announcement is None:
+            return {"status": "error", "message": "No announcement to clear."}, 404
+        db.session.delete(announcement)
+        db.session.commit()
+        return {"status": "success", "message": "Announcement cleared."}, 200
 
 
 api.add_resource(AdminSessions, "/api/admin/sessions")
