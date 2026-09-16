@@ -145,6 +145,77 @@ ROUTEROS_USER=
 ROUTEROS_PASSWORD=
 ```
 
+## API Endpoints
+Base URL: `http://127.0.0.1:5555`
+
+Protected endpoints require the JWT returned by the admin login:
+`Authorization: Bearer <access_token>`.
+
+| Method | Endpoint | Auth | Purpose |
+|--------|----------|------|---------|
+| `POST` | `/api/auth/login` | Public | Admin login |
+| `POST` | `/api/admin/password/change` | Admin JWT | Change the admin password |
+| `GET` | `/api/packages` | Public | List active customer packages |
+| `POST` | `/api/stkpush` | Public | Start an M-Pesa STK Push payment |
+| `GET` | `/api/payment/status/<transaction_id>` | Public | Check payment status |
+| `POST` | `/api/mpesa/callback` | M-Pesa callback | Receive Daraja payment callbacks |
+| `POST` | `/api/reconnect` | Public | Check device reconnection eligibility |
+| `POST` | `/api/vouchers/activate` | Public | Activate a voucher |
+| `POST` | `/api/vouchers/generate` | Admin JWT | Generate an admin voucher |
+| `GET` | `/api/admin/transactions` | Admin JWT | List transactions |
+| `GET` | `/api/admin/active-users` | Admin JWT | List active sessions |
+| `GET` | `/api/admin/routers` | Admin JWT | List routers |
+| `GET` | `/api/admin/plans` | Admin JWT | List all plans |
+| `PATCH` | `/api/admin/plans/<plan_id>` | Admin JWT | Update a plan price |
+| `POST` | `/api/admin/restart` | Admin JWT | Mark a router as restarting |
+
+### Common Request Bodies
+
+Admin login:
+
+```json
+{
+	"username": "admin",
+	"password": "Admin@2026"
+}
+```
+
+STK Push:
+
+```json
+{
+	"phone_number": "0708419329",
+	"package_id": 1
+}
+```
+
+Voucher activation:
+
+```json
+{
+	"code": "VCH-XXXXXXXX"
+}
+```
+
+Voucher generation:
+
+```json
+{
+	"package_id": 1,
+	"client_name": "Walk-in"
+}
+```
+
+### Default Admin Credentials
+
+The development bootstrap creates this account when no admin exists:
+
+- Username: `admin`
+- Password: `Admin@2026`
+
+Use these credentials only for local development. Change the password through
+`POST /api/admin/password/change` immediately in any shared or deployed environment.
+
 ## Git Workflow
 - **main** — always deployable, protected.  
 - **develop** — integration branch.  
