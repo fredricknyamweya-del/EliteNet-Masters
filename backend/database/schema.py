@@ -80,7 +80,9 @@ class Package(db.Model):
     name = db.Column(db.String(100), nullable=False)
     price = db.Column(db.Numeric(10, 2), nullable=False)
     duration_minutes = db.Column(db.Integer, nullable=False)
-    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    is_active = db.Column(
+        db.Boolean, nullable=False, server_default=db.text("TRUE"), index=True
+    )
     created_at = db.Column(
         db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
     )
@@ -254,7 +256,9 @@ class Router(db.Model):
     status = db.Column(
         STATUS_ENUM, nullable=False, server_default="offline", index=True
     )
-    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    is_active = db.Column(
+        db.Boolean, nullable=False, server_default=db.text("TRUE"), index=True
+    )
     created_at = db.Column(
         db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
     )
@@ -314,7 +318,9 @@ class Session(db.Model):
         db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
     )
     expires_at = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
-    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    is_active = db.Column(
+        db.Boolean, nullable=False, server_default=db.text("TRUE"), index=True
+    )
     ip_address = db.Column(db.String(45), nullable=True)
     mac_address = db.Column(db.String(20), nullable=True)
     created_at = db.Column(
