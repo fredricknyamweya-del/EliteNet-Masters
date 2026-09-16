@@ -35,7 +35,7 @@ Fallback options — M-Pesa code reconnect or admin-issued vouchers — ensure a
 - **Backend**: Python / Flask — Daraja STK Push, callbacks, payment verification.  
 - **Backend dependency management**: Pipenv (Pipfile / Pipfile.lock).  
 - **Router integration**: RouterOS API (routeros-api / librouteros).  
-- **Database**: PostgreSQL or MySQL, via SQLAlchemy — transactions, packages, sessions, vouchers.  
+- **Database**: PostgreSQL via SQLAlchemy — transactions, packages, sessions, vouchers.
 - **Scheduling**: APScheduler / Flask-APScheduler — session expiry.  
 - **Cross-origin requests**: Flask-CORS.  
 - **Hosting**: Render/VPS (always-on) for backend.  
@@ -88,14 +88,21 @@ wifi-hotspot-billing/
 ## Setup
 - Frontend uses **npm** for dependency management.  
 - `.nvmrc` pins Node version for consistency.  
-- Backend uses **Python virtual environment + pip** for local development and Render deployment.  
+- Backend uses **Python virtual environment + pip** for local development and Render deployment. PostgreSQL is required in every environment.
 - Use `backend/requirements.txt` for installed Python dependencies and `backend/run.py` as the app entry point.  
 
 ## Backend Dev Server
+Start PostgreSQL with Docker Compose:
+
+```bash
+cd /Users/macbook/Desktop/Project1/EliteNet-Masters/backend
+docker compose up -d postgres
+```
+
 From the project root or inside the backend folder, start the API with:
 
 ```bash
-cd /Users/macbook/Desktop/Project1/wifi-hotspot-billing/backend
+cd /Users/macbook/Desktop/Project1/EliteNet-Masters/backend
 source ../.venv/bin/activate
 python run.py
 ```
@@ -103,7 +110,7 @@ python run.py
 Optional port override:
 
 ```bash
-cd /Users/macbook/Desktop/Project1/wifi-hotspot-billing/backend
+cd /Users/macbook/Desktop/Project1/EliteNet-Masters/backend
 source ../.venv/bin/activate
 PORT=5001 python run.py
 ```
@@ -111,7 +118,7 @@ PORT=5001 python run.py
 Production-style local run check:
 
 ```bash
-dcd /Users/macbook/Desktop/Project1/wifi-hotspot-billing/backend
+cd /Users/macbook/Desktop/Project1/EliteNet-Masters/backend
 source ../.venv/bin/activate
 gunicorn run:app --bind 127.0.0.1:8000
 ```
@@ -123,7 +130,8 @@ Create `.env` in `backend/` (never commit this):
 FLASK_ENV=development
 SECRET_KEY=replace_with_a_long_random_string
 ADMIN_TOKEN_EXP_MINUTES=480
-DATABASE_URL=sqlite:///elitenet_masters.db
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/elitenet_masters
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/elitenet_masters_test
 
 DARAJA_CONSUMER_KEY=
 DARAJA_CONSUMER_SECRET=
