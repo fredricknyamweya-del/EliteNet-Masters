@@ -17,7 +17,7 @@ def _ensure_default_admin(app):
 
 		admin_username = os.getenv("ADMIN_USERNAME", "admin")
 		admin_password = os.getenv("ADMIN_PASSWORD", "Admin@2026")
-		if app.config.get("ENV") == "production" and not os.getenv("ADMIN_PASSWORD"):
+		if os.getenv("FLASK_ENV") == "production" and not os.getenv("ADMIN_PASSWORD"):
 			raise RuntimeError("ADMIN_PASSWORD must be set in production")
 		admin = Admin.query.filter_by(username=admin_username).first()
 		if admin is None:
