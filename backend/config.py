@@ -2,24 +2,26 @@ import os
 from datetime import timedelta
 
 
-def _get_database_uri():
-    database_url = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
-    if database_url:
-        return database_url.replace("postgres://", "postgresql://", 1)
-
-    default_postgres_uri = (
-        "postgresql://postgres:postgres@localhost:5432/elitenet_masters"
+def _get_database_uri(environment_names, default_database):
+    database_url = next(
+        (os.getenv(name) for name in environment_names if os.getenv(name)),
+        f"postgresql://postgres:postgres@localhost:5432/{default_database}",
     )
-    if os.getenv("FLASK_ENV") == "production":
-        return os.getenv("POSTGRES_DATABASE_URL", default_postgres_uri)
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-    return os.getenv("POSTGRES_DATABASE_URL", default_postgres_uri)
+    if not database_url.startswith(("postgresql://", "postgresql+psycopg2://")):
+        raise ValueError("Only PostgreSQL database URLs are supported")
+
+    return database_url
 
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "change-this-in-production")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_DATABASE_URI = _get_database_uri()
+    SQLALCHEMY_DATABASE_URI = _get_database_uri(
+        ("DATABASE_URL", "POSTGRES_URL", "POSTGRES_DATABASE_URL"),
+        "elitenet_masters",
+    )
     ADMIN_TOKEN_EXP_MINUTES = int(os.getenv("ADMIN_TOKEN_EXP_MINUTES", "480"))
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=ADMIN_TOKEN_EXP_MINUTES)
     MPESA_STK_TIMEOUT_MINUTES = int(
@@ -33,7 +35,10 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = os.getenv("TEST_DATABASE_URL", "sqlite:///elitenet_masters_test.db")
+    SQLALCHEMY_DATABASE_URI = _get_database_uri(
+        ("TEST_DATABASE_URL", "POSTGRES_TEST_DATABASE_URL"),
+        "elitenet_masters_test",
+    )
 
 
 class ProductionConfig(Config):

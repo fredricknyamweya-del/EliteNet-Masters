@@ -33,7 +33,6 @@ Thumbs.db
 *.swp
 
 # Database files
-*.sqlite
 *.sqlite3
 *.db
 

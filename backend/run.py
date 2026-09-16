@@ -96,11 +96,6 @@ def create_app(config_name=None):
 	config_object = config_by_name.get(selected_config, config_by_name["development"])
 	app.config.from_object(config_object)
 
-	database_url = os.getenv("DATABASE_URL")
-	if database_url and database_url.startswith("postgres://"):
-		database_url = database_url.replace("postgres://", "postgresql://", 1)
-		app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-
 	CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
 
 	db.init_app(app)

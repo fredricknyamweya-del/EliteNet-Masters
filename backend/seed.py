@@ -14,10 +14,6 @@ def create_app_for_seed():
     config_name = os.getenv("FLASK_ENV", "development")
     app.config.from_object(config_by_name[config_name])
 
-    database_url = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_DATABASE_URL")
-    if database_url:
-        app.config["SQLALCHEMY_DATABASE_URI"] = database_url.replace("postgres://", "postgresql://", 1)
-
     db.init_app(app)
     bcrypt.init_app(app)
     with app.app_context():
