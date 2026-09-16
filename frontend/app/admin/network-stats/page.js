@@ -13,6 +13,7 @@ export default function NetworkStatsPage() {
   const router = useRouter();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -20,8 +21,8 @@ export default function NetworkStatsPage() {
       try {
         const res = await getNetworkStats();
         if (mounted && res?.status === "success") setStats(res.data);
-      } catch {
-        // ignore mock
+      } catch (requestError) {
+        if (mounted) setError(requestError.message || "Failed to load network stats.");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -45,6 +46,7 @@ export default function NetworkStatsPage() {
         </header>
 
         <div className="space-y-6">
+          {error && <p className="rounded-xl border border-red-400/40 bg-red-500/10 p-4 text-sm text-red-300">{error}</p>}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <GlassCard borderColor="#22b4af" className="p-5">
               <p className="text-xs font-poppins uppercase tracking-[0.2em] text-white/70">Total data served today</p>

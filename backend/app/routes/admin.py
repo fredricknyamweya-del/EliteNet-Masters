@@ -6,7 +6,7 @@ from flask_restful import Resource
 from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import api, db
-from app.models import Admin, Package, Router, Session, Transaction
+from app.models import Admin, Announcement, Package, Router, Session, Transaction
 
 
 class AdminTransactions(Resource):
@@ -23,7 +23,15 @@ class AdminTransactions(Resource):
             if db.session.get(Admin, admin_id) is None:
                 return {"status": "error", "message": "Unauthorized admin access."}, 401
 
-            records = Transaction.query.order_by(Transaction.created_at.desc()).all()
+            query = Transaction.query.order_by(Transaction.created_at.desc())
+            status = request.args.get("status")
+            if status in {"pending", "success", "failed"}:
+                query = query.filter_by(status=status)
+            if request.args.get("date") == "today":
+                from datetime import datetime, timezone
+                today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+                query = query.filter(Transaction.created_at >= today)
+            records = query.all()
             return {"status": "success", "data": [record.to_dict() for record in records]}, 200
         except SQLAlchemyError:
             db.session.rollback()
@@ -47,7 +55,18 @@ class AdminActiveUsers(Resource):
                 return {"status": "error", "message": "Unauthorized admin access."}, 401
 
             active_sessions = Session.query.filter_by(is_active=True).all()
-            return {"status": "success", "data": [record.to_dict() for record in active_sessions]}, 200
+            data = []
+            for record in active_sessions:
+                item = record.to_dict()
+                item["package"] = (
+                    record.transaction.package.name
+                    if record.transaction and record.transaction.package
+                    else record.voucher.package.name
+                    if record.voucher and record.voucher.package
+                    else "Unknown"
+                )
+                data.append(item)
+            return {"status": "success", "data": data}, 200
         except SQLAlchemyError:
             db.session.rollback()
             current_app.logger.exception("Failed to retrieve admin active users")
@@ -211,3 +230,105 @@ class AdminRestart(Resource):
 
 
 api.add_resource(AdminRestart, "/api/admin/restart")
+
+
+def _admin_id():
+    try:
+        admin_id = int(get_jwt_identity())
+    except (TypeError, ValueError):
+        return None
+    return admin_id if db.session.get(Admin, admin_id) else None
+
+
+class AdminSessions(Resource):
+    @jwt_required()
+    def get(self):
+        if _admin_id() is None:
+            return {"status": "error", "message": "Unauthorized admin access."}, 401
+        status = request.args.get("status", "all")
+        query = Session.query.order_by(Session.created_at.desc())
+        if status == "active":
+            query = query.filter(Session.is_active.is_(True))
+        elif status == "expired":
+            query = query.filter(Session.is_active.is_(False))
+        sessions = query.all()
+        data = []
+        for session in sessions:
+            package = None
+            if session.transaction and session.transaction.package:
+                package = session.transaction.package.name
+            elif session.voucher and session.voucher.package:
+                package = session.voucher.package.name
+            item = session.to_dict()
+            item["package"] = package or "Unknown"
+            data.append(item)
+        return {"status": "success", "data": data}, 200
+
+
+class AdminNetworkStats(Resource):
+    @jwt_required()
+    def get(self):
+        if _admin_id() is None:
+            return {"status": "error", "message": "Unauthorized admin access."}, 401
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc)
+        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        sessions = Session.query.filter(Session.created_at >= today).all()
+        active = Session.query.filter_by(is_active=True).count()
+        hourly = [0] * 24
+        for session in sessions:
+            created = session.created_at
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            hourly[created.hour] += 1
+        peak_hour = max(range(24), key=lambda hour: hourly[hour])
+        return {
+            "status": "success",
+            "data": {
+                "total_data_mb": 0,
+                "peak_hour": f"{peak_hour}:00 - {(peak_hour + 1) % 24}:00",
+                "busiest_package": "N/A",
+                "total_sessions_today": len(sessions),
+                "active_connections": active,
+                "hourly_usage": hourly,
+            },
+        }, 200
+
+
+class AdminAnnouncement(Resource):
+    @jwt_required()
+    def get(self):
+        if _admin_id() is None:
+            return {"status": "error", "message": "Unauthorized admin access."}, 401
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc)
+        announcement = Announcement.query.filter(
+            db.or_(Announcement.expires_at.is_(None), Announcement.expires_at > now)
+        ).order_by(Announcement.created_at.desc()).first()
+        return {"status": "success", "data": announcement.to_dict() if announcement else None}, 200
+
+    @jwt_required()
+    def post(self):
+        admin_id = _admin_id()
+        if admin_id is None:
+            return {"status": "error", "message": "Unauthorized admin access."}, 401
+        payload = request.get_json(silent=True) or {}
+        message = payload.get("message", "").strip()
+        expiry = payload.get("expiry", "1h")
+        if not message or len(message) > 200:
+            return {"status": "error", "message": "Message must be between 1 and 200 characters."}, 400
+        from datetime import datetime, timedelta, timezone
+
+        durations = {"1h": timedelta(hours=1), "6h": timedelta(hours=6), "24h": timedelta(hours=24)}
+        expires_at = None if expiry == "until_cleared" else datetime.now(timezone.utc) + durations.get(expiry, durations["1h"])
+        announcement = Announcement(content=message, expires_at=expires_at, created_by=admin_id)
+        db.session.add(announcement)
+        db.session.commit()
+        return {"status": "success", "message": "Announcement published", "data": announcement.to_dict()}, 201
+
+
+api.add_resource(AdminSessions, "/api/admin/sessions")
+api.add_resource(AdminNetworkStats, "/api/admin/network-stats")
+api.add_resource(AdminAnnouncement, "/api/admin/announcement")

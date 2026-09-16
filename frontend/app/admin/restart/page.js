@@ -14,6 +14,7 @@ export default function RestartHotspotPage() {
   const [selectedRouter, setSelectedRouter] = useState(null);
   const [restarting, setRestarting] = useState(false);
   const [restartStatus, setRestartStatus] = useState(null);
+  const [error, setError] = useState("");
 
   // Load routers from backend on mount
   useEffect(() => {
@@ -23,8 +24,9 @@ export default function RestartHotspotPage() {
         if (result.status === "success") {
           setRouters(result.data);
         }
-      } catch {
+      } catch (requestError) {
         setRouters([]);
+        setError(requestError.message || "Failed to load routers.");
       } finally {
         setLoading(false);
       }
@@ -36,11 +38,13 @@ export default function RestartHotspotPage() {
     if (!selectedRouter) return;
     setRestarting(true);
     setRestartStatus(null);
+    setError("");
     try {
       const result = await restartRouter(selectedRouter.id);
       setRestartStatus(result.status === "success" ? "success" : "error");
-    } catch {
+    } catch (requestError) {
       setRestartStatus("error");
+      setError(requestError.message || "Router restart failed.");
     } finally {
       setRestarting(false);
     }
@@ -74,6 +78,7 @@ export default function RestartHotspotPage() {
 
         {/* Router list */}
         <GlassCard borderColor="cyan" className="p-5 flex flex-col gap-4">
+          {error && <p className="rounded-xl border border-red-400/40 bg-red-500/10 p-4 text-sm text-red-300">{error}</p>}
           <h2 className="text-[#e0f2ec] font-semibold text-sm">
             Select Router to Reboot
           </h2>
@@ -106,7 +111,7 @@ export default function RestartHotspotPage() {
                     <p className="text-white font-semibold text-sm">
                       {r.name}
                     </p>
-                    <p className="text-white/50 text-xs">{r.ip}</p>
+                    <p className="text-white/50 text-xs">{r.ip_address || r.ip}</p>
                   </div>
                   <span
                     className={`text-xs font-semibold px-2 py-1 rounded-full ${
@@ -150,11 +155,11 @@ export default function RestartHotspotPage() {
               ✓
             </div>
             <p className="text-[#10B981] font-semibold text-sm">
-              Router rebooted successfully
+              {selectedRouter?.name} status updated
             </p>
             <p className="text-white/60 text-xs text-center">
-              {selectedRouter?.name} is restarting. Clients will reconnect
-              automatically in ~30 seconds.
+              The backend marked this router as restarting. Physical reboot requires
+              RouterOS credentials and an available router connection.
             </p>
           </GlassCard>
         )}

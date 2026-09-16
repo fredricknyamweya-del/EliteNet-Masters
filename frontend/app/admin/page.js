@@ -188,7 +188,7 @@ export default function AdminPage() {
           ...routers.map((router) => ({
             name: router.name || "Router",
             status: router.status === "online" ? "Healthy" : "Warning",
-            detail: router.ip || "No IP available",
+            detail: router.ip_address || router.ip || "No IP available",
             tone: router.status === "online" ? "green" : "amber",
           })),
           { name: "Payment Gateway", status: "Healthy", detail: "M-Pesa callbacks active", tone: "cyan" },

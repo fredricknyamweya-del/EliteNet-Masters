@@ -23,14 +23,15 @@ export default function AnnouncementPage() {
   const [charCount, setCharCount] = useState(0);
   const [activeAnnouncement, setActiveAnnouncement] = useState(null);
   const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
       try {
         const res = await getActiveAnnouncement();
         if (res?.status === "success") setActiveAnnouncement(res.data || null);
-      } catch {
-        // ignore mock
+      } catch (requestError) {
+        setError(requestError.message || "Failed to load announcement.");
       }
     }
     load();
@@ -43,14 +44,15 @@ export default function AnnouncementPage() {
   async function handlePublish() {
     if (!canPublish) return;
     setPublishing(true);
+    setError("");
     try {
       const res = await publishAnnouncement(message.trim(), expiry);
       if (res?.status === "success") {
         setActiveAnnouncement(res.data);
         setMessage("");
       }
-    } catch {
-      // swallow for mock
+    } catch (requestError) {
+      setError(requestError.message || "Failed to publish announcement.");
     } finally {
       setPublishing(false);
     }
@@ -71,6 +73,7 @@ export default function AnnouncementPage() {
         </header>
 
         <div className="space-y-6">
+          {error && <p className="rounded-xl border border-red-400/40 bg-red-500/10 p-4 text-sm text-red-300">{error}</p>}
           <GlassCard borderColor="#7C3AED" className="p-5 sm:p-6">
             <div className="space-y-4">
               <div>
