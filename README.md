@@ -169,8 +169,11 @@ Protected endpoints require the JWT returned by the admin login:
 | `GET` | `/api/admin/sessions?status=all` | Admin JWT | List session history; use `active` or `expired` as the status filter |
 | `GET` | `/api/admin/announcement` | Admin JWT | Read the active portal announcement |
 | `POST` | `/api/admin/announcement` | Admin JWT | Publish a portal announcement |
+| `DELETE` | `/api/admin/announcement` | Admin JWT | Clear the latest announcement |
 | `GET` | `/api/admin/plans` | Admin JWT | List all plans |
+| `POST` | `/api/admin/plans` | Admin JWT | Create a plan |
 | `PATCH` | `/api/admin/plans/<plan_id>` | Admin JWT | Update a plan price |
+| `DELETE` | `/api/admin/plans/<plan_id>` | Admin JWT | Archive a plan |
 | `POST` | `/api/admin/restart` | Admin JWT | Mark a router as restarting |
 
 ### Common Request Bodies
