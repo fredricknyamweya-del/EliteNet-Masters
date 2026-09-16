@@ -1,4 +1,3 @@
-from datetime import datetime
 from decimal import Decimal
 
 from werkzeug.security import check_password_hash
@@ -12,12 +11,13 @@ class Admin(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(100), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
+    )
     updated_at = db.Column(
-        db.DateTime,
+        db.DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        server_default=db.func.now(),
     )
 
     def check_password(self, password):
@@ -59,7 +59,9 @@ class Client(db.Model):
     username = db.Column(db.String(50), nullable=True, unique=True, index=True)
     # Stores Bcrypt hashes only. Never store plain text passwords.
     password_hash = db.Column(db.String(255), nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
+    )
 
     transactions = db.relationship("Transaction", backref="client", lazy=True)
     devices = db.relationship("Device", backref="client", lazy=True)
@@ -84,20 +86,6 @@ class Client(db.Model):
         return f"<Client id={self.id} phone_number={self.phone_number} username={self.username}>"
 
 
-# class Admin(db.Model):
-#     __tablename__ = "admins"
-
-#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-#     username = db.Column(db.String(100), unique=True, nullable=False, index=True)
-#     password_hash = db.Column(db.String(255), nullable=False)
-#     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-#     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-#     def verify_password(self, password):
-#         return check_password_hash(self.password_hash, password)
-
-#     def set_password(self, password):
-#         self.password_hash = generate_password_hash(password)
 class Package(db.Model):
     __tablename__ = "packages"
 
@@ -106,13 +94,16 @@ class Package(db.Model):
     name = db.Column(db.String(100), nullable=False)
     price = db.Column(db.Numeric(10, 2), nullable=False)
     duration_minutes = db.Column(db.Integer, nullable=False)
-    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    is_active = db.Column(
+        db.Boolean, nullable=False, server_default=db.text("TRUE"), index=True
+    )
+    created_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
+    )
     updated_at = db.Column(
-        db.DateTime,
+        db.DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        server_default=db.func.now(),
     )
 
     transactions = db.relationship("Transaction", backref="package", lazy=True)
@@ -141,26 +132,32 @@ class Transaction(db.Model):
         "success",
         "failed",
         name="transaction_status",
-        native_enum=False,
+        native_enum=True,
     )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     phone_number = db.Column(db.String(15), nullable=False, index=True)
     package_id = db.Column(
         db.Integer,
-        db.ForeignKey("packages.id"),
+        db.ForeignKey("packages.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=True)
-    status = db.Column(STATUS_ENUM, nullable=False, default="pending", index=True)
+    client_id = db.Column(
+        db.Integer, db.ForeignKey("clients.id", ondelete="SET NULL"), nullable=True
+    )
+    status = db.Column(
+        STATUS_ENUM, nullable=False, server_default="pending", index=True
+    )
     checkout_request_id = db.Column(db.String(100), nullable=True, unique=True, index=True)
     merchant_request_id = db.Column(db.String(100), nullable=True)
     mpesa_receipt_number = db.Column(db.String(20), nullable=True, unique=True, index=True)
     result_code = db.Column(db.Integer, nullable=True)
     result_description = db.Column(db.String(255), nullable=True)
     amount_paid = db.Column(db.Numeric(10, 2), nullable=True)
-    paid_at = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    paid_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
+    )
 
     session = db.relationship("Session", backref="transaction", uselist=False, lazy=True)
 
@@ -203,25 +200,29 @@ class Voucher(db.Model):
         "redeemed",
         "expired",
         name="voucher_status",
-        native_enum=False,
+        native_enum=True,
     )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     code = db.Column(db.String(50), nullable=False, unique=True, index=True)
     package_id = db.Column(
         db.Integer,
-        db.ForeignKey("packages.id"),
+        db.ForeignKey("packages.id", ondelete="RESTRICT"),
         nullable=False,
     )
     redeemed_by = db.Column(
         db.Integer,
-        db.ForeignKey("clients.id"),
+        db.ForeignKey("clients.id", ondelete="SET NULL"),
         nullable=True,
     )
-    status = db.Column(STATUS_ENUM, nullable=False, default="unused", index=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    redeemed_at = db.Column(db.DateTime, nullable=True)
-    expires_at = db.Column(db.DateTime, nullable=True, index=True)
+    status = db.Column(
+        STATUS_ENUM, nullable=False, server_default="unused", index=True
+    )
+    created_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
+    )
+    redeemed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=True, index=True)
 
     # A voucher can grant at most one access session after redemption.
     session = db.relationship(
@@ -252,14 +253,16 @@ class Device(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     client_id = db.Column(
         db.Integer,
-        db.ForeignKey("clients.id"),
+        db.ForeignKey("clients.id", ondelete="CASCADE"),
         nullable=False,
     )
     mac_address = db.Column(db.String(20), nullable=False, unique=True, index=True)
     device_name = db.Column(db.String(100), nullable=True)
     ip_address = db.Column(db.String(45), nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    last_seen_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
+    )
+    last_seen_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     sessions = db.relationship("Session", backref="device", lazy=True)
 
@@ -290,17 +293,23 @@ class Router(db.Model):
         "offline",
         "restarting",
         name="router_status",
-        native_enum=False,
+        native_enum=True,
     )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100), nullable=False)
     ip_address = db.Column(db.String(45), nullable=False, unique=True, index=True)
     location = db.Column(db.String(100), nullable=True)
-    status = db.Column(STATUS_ENUM, nullable=False, default="offline", index=True)
-    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    last_seen_at = db.Column(db.DateTime, nullable=True)
+    status = db.Column(
+        STATUS_ENUM, nullable=False, server_default="offline", index=True
+    )
+    is_active = db.Column(
+        db.Boolean, nullable=False, server_default=db.text("TRUE"), index=True
+    )
+    created_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
+    )
+    last_seen_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     sessions = db.relationship("Session", backref="router", lazy=True)
 
@@ -338,38 +347,44 @@ class Session(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     device_id = db.Column(
         db.Integer,
-        db.ForeignKey("devices.id"),
+        db.ForeignKey("devices.id", ondelete="SET NULL"),
         nullable=True,
     )
     router_id = db.Column(
         db.Integer,
-        db.ForeignKey("routers.id"),
+        db.ForeignKey("routers.id", ondelete="SET NULL"),
         nullable=True,
     )
     # Client and package are resolved through one of these access sources.
     transaction_id = db.Column(
     db.Integer,
-    db.ForeignKey("transactions.id"),
+    db.ForeignKey("transactions.id", ondelete="SET NULL"),
     nullable=True,
     unique=True,
 )
 
     voucher_id = db.Column(
     db.Integer,
-    db.ForeignKey("vouchers.id"),
+    db.ForeignKey("vouchers.id", ondelete="SET NULL"),
     nullable=True,
     unique=True,
 )
     # A phone number is optional because voucher access may be anonymous.
     phone_number = db.Column(db.String(15), nullable=True, index=True)
     routeros_username = db.Column(db.String(50), nullable=True)
-    started_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    expires_at = db.Column(db.DateTime, nullable=False, index=True)
-    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    started_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
+    )
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
+    is_active = db.Column(
+        db.Boolean, nullable=False, server_default=db.text("TRUE"), index=True
+    )
     # These capture the network details observed for this specific connection.
     ip_address = db.Column(db.String(45), nullable=True)
     mac_address = db.Column(db.String(20), nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, server_default=db.func.now()
+    )
 
     def to_dict(self):
         return {
