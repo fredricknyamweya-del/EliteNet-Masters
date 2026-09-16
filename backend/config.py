@@ -50,7 +50,9 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
 
-    if not os.getenv("SECRET_KEY") or len(os.getenv("SECRET_KEY", "")) < 32:
+    if os.getenv("FLASK_ENV") == "production" and (
+        not os.getenv("SECRET_KEY") or len(os.getenv("SECRET_KEY", "")) < 32
+    ):
         raise RuntimeError("Production SECRET_KEY must be set and at least 32 characters long")
 
 
