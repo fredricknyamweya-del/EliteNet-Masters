@@ -86,20 +86,6 @@ class Client(db.Model):
         return f"<Client id={self.id} phone_number={self.phone_number} username={self.username}>"
 
 
-# class Admin(db.Model):
-#     __tablename__ = "admins"
-
-#     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-#     username = db.Column(db.String(100), unique=True, nullable=False, index=True)
-#     password_hash = db.Column(db.String(255), nullable=False)
-#     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-#     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-#     def verify_password(self, password):
-#         return check_password_hash(self.password_hash, password)
-
-#     def set_password(self, password):
-#         self.password_hash = generate_password_hash(password)
 class Package(db.Model):
     __tablename__ = "packages"
 
