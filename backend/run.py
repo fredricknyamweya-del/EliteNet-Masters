@@ -90,7 +90,7 @@ def _setup_session_expiry_scheduler(app):
 
 
 def create_app(config_name=None):
-	app = Flask(__name__, instance_relative_config=True)
+	app = Flask(__name__)
 
 	selected_config = config_name or os.getenv("FLASK_ENV", "development")
 	config_object = config_by_name.get(selected_config, config_by_name["development"])
