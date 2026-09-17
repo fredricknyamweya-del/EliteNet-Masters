@@ -1,7 +1,7 @@
 import os
 from decimal import Decimal
 
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 
 from extensions import api, bcrypt, db, jwt, migrate
@@ -111,6 +111,19 @@ def create_app(config_name=None):
 			}
 		},
 	)
+
+	allowed_origins = {"http://localhost:3000", "http://127.0.0.1:3000"}
+
+	@app.after_request
+	def add_local_cors_headers(response):
+		origin = request.headers.get("Origin")
+		if origin in allowed_origins:
+			response.headers["Access-Control-Allow-Origin"] = origin
+			response.headers["Access-Control-Allow-Credentials"] = "true"
+			response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-CSRF-TOKEN"
+			response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+			response.headers.add("Vary", "Origin")
+		return response
 
 	db.init_app(app)
 	bcrypt.init_app(app)
