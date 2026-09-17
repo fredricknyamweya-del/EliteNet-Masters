@@ -13,7 +13,7 @@ import { triggerStkPush, checkPaymentStatus, reconnect as reconnectSession } fro
 export const PACKAGES = [
   { id: 1, label: "30minutes", price: 5 },
   { id: 2, label: "1hour",     price: 10 },
-  { id: 3, label: "2hours",    price: 20 },
+  { id: 3, label: "3hours",    price: 20 },
   { id: 4, label: "4hours",    price: 35 },
   { id: 5, label: "6hours",    price: 45 },
   { id: 6, label: "24hours",   price: 55 },
