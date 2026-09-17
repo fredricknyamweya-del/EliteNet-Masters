@@ -34,6 +34,9 @@ def _ensure_default_packages(app):
 	with app.app_context():
 		from app.models import Package
 
+		if Package.query.count() > 0:
+			return
+
 		default_packages = [
 			("30 Minutes", Decimal("5.00"), 30),
 			("3 Hours", Decimal("10.00"), 180),
@@ -104,7 +107,11 @@ def create_app(config_name=None):
 		app,
 		resources={
 			r"/api/*": {
-				"origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+				"origins": [
+					"http://localhost:3000",
+					"http://127.0.0.1:3000",
+					"https://elitenet-masters.onrender.com",
+				],
 				"supports_credentials": True,
 				"allow_headers": ["Content-Type", "X-CSRF-TOKEN"],
 				"methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -112,7 +119,11 @@ def create_app(config_name=None):
 		},
 	)
 
-	allowed_origins = {"http://localhost:3000", "http://127.0.0.1:3000"}
+	allowed_origins = {
+		"http://localhost:3000",
+		"http://127.0.0.1:3000",
+		"https://elitenet-masters.onrender.com",
+	}
 
 	@app.after_request
 	def add_local_cors_headers(response):

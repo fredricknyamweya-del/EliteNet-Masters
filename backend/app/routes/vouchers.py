@@ -1,6 +1,6 @@
 import random
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import current_app, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -9,6 +9,10 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from extensions import api, db
 from app.models import Admin, Package, Voucher
+
+
+def _utc_now():
+    return datetime.now(timezone.utc)
 
 
 def _voucher_code():
@@ -47,7 +51,7 @@ class VoucherGenerate(Resource):
                 code=code,
                 package_id=package.id,
                 status="unused",
-                expires_at=datetime.utcnow() + timedelta(days=30),
+                expires_at=_utc_now() + timedelta(days=30),
             )
             db.session.add(voucher)
             db.session.commit()
@@ -82,13 +86,13 @@ class VoucherActivate(Resource):
             if voucher.status == "redeemed":
                 return {"status": "error", "message": "Voucher already used."}, 409
 
-            if voucher.expires_at and voucher.expires_at < datetime.utcnow():
+            if voucher.expires_at and voucher.expires_at < _utc_now():
                 voucher.status = "expired"
                 db.session.commit()
                 return {"status": "error", "message": "Voucher has expired."}, 410
 
             voucher.status = "redeemed"
-            voucher.redeemed_at = datetime.utcnow()
+            voucher.redeemed_at = _utc_now()
             db.session.commit()
 
             return {
