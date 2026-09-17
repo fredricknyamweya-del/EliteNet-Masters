@@ -34,6 +34,9 @@ def _ensure_default_packages(app):
 	with app.app_context():
 		from app.models import Package
 
+		if Package.query.count() > 0:
+			return
+
 		default_packages = [
 			("30 Minutes", Decimal("5.00"), 30),
 			("3 Hours", Decimal("10.00"), 180),
