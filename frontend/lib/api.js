@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5555";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 
 function getCookie(name) {
   if (typeof document === "undefined") return "";
@@ -28,6 +28,10 @@ function toQueryString(query = {}) {
 async function request(path, { method = "GET", body, auth = false, query } = {}) {
   if (process.env.NODE_ENV === "test") {
     throw new Error("Network disabled in test mode.");
+  }
+
+  if (!API_URL) {
+    throw new Error("NEXT_PUBLIC_API_URL is not configured.");
   }
 
   const headers = { "Content-Type": "application/json" };
