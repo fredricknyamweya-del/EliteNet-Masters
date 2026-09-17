@@ -42,7 +42,7 @@ export default function PackagesPage() {
           setPackages(
             result.packages.map((pkg) => ({
               ...pkg,
-              label: pkg.name,
+              label: `${pkg.name} (${pkg.duration_minutes} min)`,
             }))
           );
         }
