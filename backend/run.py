@@ -17,6 +17,9 @@ def _ensure_default_admin(app):
 
 		admin_username = os.getenv("ADMIN_USERNAME", "admin")
 		admin_password = os.getenv("ADMIN_PASSWORD", "1alutastation")
+		reset_admin_password = os.getenv("RESET_ADMIN_PASSWORD", "false").strip().lower() in {
+			"1", "true", "yes", "on"
+		}
 		if os.getenv("FLASK_ENV") == "production" and not os.getenv("ADMIN_PASSWORD"):
 			raise RuntimeError("ADMIN_PASSWORD must be set in production")
 		admin = Admin.query.filter_by(username=admin_username).first()
@@ -25,7 +28,7 @@ def _ensure_default_admin(app):
 			admin.set_password(admin_password)
 			db.session.add(admin)
 			db.session.commit()
-		elif not admin.password_hash:
+		elif reset_admin_password or not admin.password_hash:
 			admin.set_password(admin_password)
 			db.session.commit()
 
