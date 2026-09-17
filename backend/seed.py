@@ -25,7 +25,7 @@ def seed_default_admin():
     admin = Admin.query.filter_by(username="admin").first()
     if admin is None:
         admin = Admin(username="admin")
-        admin.set_password("Admin@2026")
+        admin.set_password("mohspice")
         db.session.add(admin)
     elif not admin.password_hash:
         admin.set_password("Admin@2026")
