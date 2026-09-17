@@ -124,6 +124,10 @@ export async function getPlans() {
   return await request("/api/admin/plans", { auth: true });
 }
 
+export async function getPackages() {
+  return await request("/api/packages");
+}
+
 export async function createPlan(name, price, durationMinutes) {
   return await request("/api/admin/plans", {
     method: "POST",

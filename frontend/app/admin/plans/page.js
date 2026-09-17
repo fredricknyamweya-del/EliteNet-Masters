@@ -15,6 +15,7 @@ export default function ManagePlansPage() {
   const [editingId, setEditingId] = useState(null);
   const [editPrice, setEditPrice] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [savedId, setSavedId] = useState(null);
   const [error, setError] = useState(null);
   const [newPlan, setNewPlan] = useState({ name: "", price: "", duration: "" });
@@ -25,7 +26,7 @@ export default function ManagePlansPage() {
       try {
         const result = await getPlans();
         if (result.status === "success") {
-          setPlans(result.data);
+          setPlans(result.data.filter((plan) => plan.is_active));
         }
       } catch {
         setError("Failed to load plans. Check backend connection.");
@@ -97,11 +98,15 @@ export default function ManagePlansPage() {
   }
 
   async function handleDelete(planId) {
+    setDeletingId(planId);
+    setError(null);
     try {
       await deletePlan(planId);
       setPlans((prev) => prev.filter((plan) => plan.id !== planId));
     } catch (requestError) {
       setError(requestError.message || "Failed to archive plan.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -223,8 +228,13 @@ export default function ManagePlansPage() {
                       >
                         Edit
                       </button>
-                      <button onClick={() => handleDelete(plan.id)} className="text-red-300 text-xs underline">
-                        Archive
+                      <button
+                        onClick={() => handleDelete(plan.id)}
+                        disabled={deletingId === plan.id}
+                        aria-label={`Delete ${plan.name}`}
+                        className="text-red-300 text-xs underline disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {deletingId === plan.id ? "Deleting..." : "Delete"}
                       </button>
                     </div>
                   </div>

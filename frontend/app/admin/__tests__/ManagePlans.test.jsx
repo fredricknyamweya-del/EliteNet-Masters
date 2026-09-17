@@ -56,4 +56,13 @@ describe("Manage Plans page", () => {
       screen.queryByPlaceholderText("New price (KSh)")
     ).not.toBeInTheDocument();
   });
+
+  test("removes a plan after Delete is clicked", async () => {
+    render(<ManagePlansPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Delete 30 Minutes" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("30 Minutes")).not.toBeInTheDocument();
+    });
+  });
 });

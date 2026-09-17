@@ -1,7 +1,7 @@
 import os
 from decimal import Decimal
 
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 
 from extensions import api, bcrypt, db, jwt, migrate
@@ -16,7 +16,7 @@ def _ensure_default_admin(app):
 		from app.models import Admin
 
 		admin_username = os.getenv("ADMIN_USERNAME", "admin")
-		admin_password = os.getenv("ADMIN_PASSWORD", "Admin@2026")
+		admin_password = os.getenv("ADMIN_PASSWORD", "mohspice")
 		if os.getenv("FLASK_ENV") == "production" and not os.getenv("ADMIN_PASSWORD"):
 			raise RuntimeError("ADMIN_PASSWORD must be set in production")
 		admin = Admin.query.filter_by(username=admin_username).first()
@@ -102,9 +102,28 @@ def create_app(config_name=None):
 
 	CORS(
 		app,
-		resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}},
-		supports_credentials=True,
+		resources={
+			r"/api/*": {
+				"origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+				"supports_credentials": True,
+				"allow_headers": ["Content-Type", "X-CSRF-TOKEN"],
+				"methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+			}
+		},
 	)
+
+	allowed_origins = {"http://localhost:3000", "http://127.0.0.1:3000"}
+
+	@app.after_request
+	def add_local_cors_headers(response):
+		origin = request.headers.get("Origin")
+		if origin in allowed_origins:
+			response.headers["Access-Control-Allow-Origin"] = origin
+			response.headers["Access-Control-Allow-Credentials"] = "true"
+			response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-CSRF-TOKEN"
+			response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+			response.headers.add("Vary", "Origin")
+		return response
 
 	db.init_app(app)
 	bcrypt.init_app(app)

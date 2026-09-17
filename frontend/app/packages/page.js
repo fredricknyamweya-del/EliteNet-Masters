@@ -8,18 +8,12 @@ import GradientButton from "../../components/GradientButton";
 import PackageCard from "../../components/PackageCard";
 import PaymentStatus from "../../components/PaymentStatus";
 import LoginForm from "../../components/LoginForm";
-import { triggerStkPush, checkPaymentStatus, reconnect as reconnectSession } from "../../lib/api";
-
-export const PACKAGES = [
-  { id: 1, label: "30minutes", price: 5 },
-  { id: 2, label: "1hour",     price: 10 },
-  { id: 3, label: "2hours",    price: 20 },
-  { id: 4, label: "4hours",    price: 35 },
-  { id: 5, label: "6hours",    price: 45 },
-  { id: 6, label: "24hours",   price: 55 },
-  { id: 7, label: "Weekly",    price: 195 },
-  { id: 8, label: "Monthly",   price: 575 }
-];
+import {
+  triggerStkPush,
+  checkPaymentStatus,
+  getPackages,
+  reconnect as reconnectSession,
+} from "../../lib/api";
 
 export default function PackagesPage() {
   const [activeTab, setActiveTab] = useState("packages");
@@ -32,10 +26,35 @@ export default function PackagesPage() {
   const [reconnectStatus, setReconnectStatus] = useState(null);
   const [paying, setPaying] = useState(false);
   const [payStatus, setPayStatus] = useState(null);
+  const [packages, setPackages] = useState([]);
+  const [packagesLoading, setPackagesLoading] = useState(true);
+  const [packagesError, setPackagesError] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [transactionId, setTransactionId] = useState(null);
   const pollRef = useRef(null);
   const slideBackTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    async function fetchPackages() {
+      try {
+        const result = await getPackages();
+        if (result.status === "success") {
+          setPackages(
+            result.packages.map((pkg) => ({
+              ...pkg,
+              label: pkg.name,
+            }))
+          );
+        }
+      } catch {
+        setPackagesError("Unable to load packages. Please try again.");
+      } finally {
+        setPackagesLoading(false);
+      }
+    }
+
+    fetchPackages();
+  }, []);
 
   useEffect(() => {
     if (!transactionId || payStatus === "success" || payStatus === "error") return;
@@ -186,8 +205,17 @@ export default function PackagesPage() {
             </GlassCard>
 
             {/* Package grid */}
+            {packagesLoading && (
+              <p className="text-center text-white/60 text-sm">Loading packages...</p>
+            )}
+            {packagesError && (
+              <p className="text-center text-red-300 text-sm">{packagesError}</p>
+            )}
+            {!packagesLoading && !packagesError && packages.length === 0 && (
+              <p className="text-center text-white/60 text-sm">No packages are currently available.</p>
+            )}
             <div className="grid grid-cols-2 gap-3">
-              {PACKAGES.map((pkg) => (
+              {packages.map((pkg) => (
                 <PackageCard
                   key={pkg.id}
                   pkg={pkg}
