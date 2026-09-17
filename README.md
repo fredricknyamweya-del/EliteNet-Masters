@@ -7,16 +7,20 @@ Clients connect to the hotspot and are redirected to a custom captive portal. Th
 Fallback options — M-Pesa code reconnect or admin-issued vouchers — ensure access if automatic provisioning fails.
 
 ## Packages Offered
-| Package      | Price (KSh) |
-|--------------|-------------|
-| 30 minutes   | 5           |
-| 1 hour       | 10          |
-| 2 hours      | 20          |
-| 4 hours      | 35          |
-| 6 hours      | 45          |
-| 24 hours     | 55          |
-| Weekly       | 195         |
-| Monthly      | 575         |
+| Package             | Price (KSh) |
+|---------------------|-------------|
+| Smoke Plan (5 min) | 2           |
+| 30min               | 5           |
+| 45min               | 7           |
+| 1hour               | 10          |
+| 2hours              | 15          |
+| 3hours              | 20          |
+| 4hours              | 30          |
+| 6hours              | 35          |
+| 12hours             | 45          |
+| 24hours             | 55          |
+| Weekly              | 175         |
+| Monthly             | 595         |
 
 ## Workflow
 1. Client connects to WiFi → redirected to captive portal.  
