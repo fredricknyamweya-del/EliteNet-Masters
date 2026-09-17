@@ -26,7 +26,7 @@ export default function ManagePlansPage() {
       try {
         const result = await getPlans();
         if (result.status === "success") {
-          setPlans(result.data);
+          setPlans(result.data.filter((plan) => plan.is_active));
         }
       } catch {
         setError("Failed to load plans. Check backend connection.");
