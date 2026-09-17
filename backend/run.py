@@ -38,12 +38,18 @@ def _ensure_default_packages(app):
 			return
 
 		default_packages = [
-			("30 Minutes", Decimal("5.00"), 30),
-			("3 Hours", Decimal("10.00"), 180),
-			("6 Hours", Decimal("20.00"), 360),
-			("24 Hours", Decimal("30.00"), 1440),
-			("Weekly", Decimal("170.00"), 10080),
-			("Monthly", Decimal("600.00"), 43200),
+			("Smoke Plan", Decimal("2.00"), 5),
+			("30min", Decimal("5.00"), 30),
+			("45min", Decimal("7.00"), 45),
+			("1hour", Decimal("10.00"), 60),
+			("2hours", Decimal("15.00"), 120),
+			("3hours", Decimal("20.00"), 180),
+			("4hours", Decimal("30.00"), 240),
+			("6hours", Decimal("35.00"), 360),
+			("12hours", Decimal("45.00"), 720),
+			("24hours", Decimal("55.00"), 1440),
+			("Weekly", Decimal("175.00"), 10080),
+			("Monthly", Decimal("595.00"), 43200),
 		]
 
 		for name, price, duration_minutes in default_packages:

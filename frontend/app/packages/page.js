@@ -42,7 +42,9 @@ export default function PackagesPage() {
           setPackages(
             result.packages.map((pkg) => ({
               ...pkg,
-              label: `${pkg.name} (${pkg.duration_minutes} min)`,
+              label: pkg.name === "Smoke Plan"
+                ? `${pkg.name} (${pkg.duration_minutes} min)`
+                : pkg.name,
             }))
           );
         }
