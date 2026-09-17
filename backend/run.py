@@ -34,9 +34,6 @@ def _ensure_default_packages(app):
 	with app.app_context():
 		from app.models import Package
 
-		if Package.query.count() > 0:
-			return
-
 		default_packages = [
 			("Smoke Plan", Decimal("2.00"), 5),
 			("30min", Decimal("5.00"), 30),
@@ -51,22 +48,22 @@ def _ensure_default_packages(app):
 			("Weekly", Decimal("175.00"), 10080),
 			("Monthly", Decimal("595.00"), 43200),
 		]
+		existing_by_duration = {}
+		for package in Package.query.order_by(Package.id.asc()).all():
+			package.is_active = False
+			existing_by_duration.setdefault(package.duration_minutes, package)
 
 		for name, price, duration_minutes in default_packages:
-			package = Package.query.filter_by(name=name).first()
+			package = existing_by_duration.get(duration_minutes)
 			if package is None:
-				db.session.add(
-					Package(
-						name=name,
-						price=price,
-						duration_minutes=duration_minutes,
-						is_active=True,
-					)
-				)
-			else:
-				package.price = price
-				package.duration_minutes = duration_minutes
-				package.is_active = True
+				package = Package(duration_minutes=duration_minutes)
+				db.session.add(package)
+				existing_by_duration[duration_minutes] = package
+
+			package.name = name
+			package.price = price
+			package.duration_minutes = duration_minutes
+			package.is_active = True
 
 		db.session.commit()
 
