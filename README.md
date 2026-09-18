@@ -7,14 +7,20 @@ Clients connect to the hotspot and are redirected to a custom captive portal. Th
 Fallback options — M-Pesa code reconnect or admin-issued vouchers — ensure access if automatic provisioning fails.
 
 ## Packages Offered
-| Package      | Price (KSh) |
-|--------------|-------------|
-| 30 minutes   | 5           |
-| 1 hour       | 10          |
-| 3 hours      | 30          |
-| 6 hours.     | 60          |
-| 24 hours     | 100         |
-| Weekly       | 300         |
+| Package             | Price (KSh) |
+|---------------------|-------------|
+| Smoke Plan (5 min) | 2           |
+| 30min               | 5           |
+| 45min               | 7           |
+| 1hour               | 10          |
+| 2hours              | 15          |
+| 3hours              | 20          |
+| 4hours              | 30          |
+| 6hours              | 35          |
+| 12hours             | 45          |
+| 24hours             | 55          |
+| Weekly              | 175         |
+| Monthly             | 595         |
 
 ## Workflow
 1. Client connects to WiFi → redirected to captive portal.  
@@ -35,7 +41,7 @@ Fallback options — M-Pesa code reconnect or admin-issued vouchers — ensure a
 - **Backend**: Python / Flask — Daraja STK Push, callbacks, payment verification.  
 - **Backend dependency management**: Pipenv (Pipfile / Pipfile.lock).  
 - **Router integration**: RouterOS API (routeros-api / librouteros).  
-- **Database**: PostgreSQL or MySQL, via SQLAlchemy — transactions, packages, sessions, vouchers.  
+- **Database**: PostgreSQL via SQLAlchemy — transactions, packages, sessions, vouchers.
 - **Scheduling**: APScheduler / Flask-APScheduler — session expiry.  
 - **Cross-origin requests**: Flask-CORS.  
 - **Hosting**: Render/VPS (always-on) for backend.  
@@ -88,14 +94,21 @@ wifi-hotspot-billing/
 ## Setup
 - Frontend uses **npm** for dependency management.  
 - `.nvmrc` pins Node version for consistency.  
-- Backend uses **Python virtual environment + pip** for local development and Render deployment.  
+- Backend uses **Python virtual environment + pip** for local development and Render deployment. PostgreSQL is required in every environment.
 - Use `backend/requirements.txt` for installed Python dependencies and `backend/run.py` as the app entry point.  
 
 ## Backend Dev Server
+Start PostgreSQL with Docker Compose:
+
+```bash
+cd /Users/macbook/Desktop/Project1/EliteNet-Masters/backend
+docker compose up -d postgres
+```
+
 From the project root or inside the backend folder, start the API with:
 
 ```bash
-cd /Users/macbook/Desktop/Project1/wifi-hotspot-billing/backend
+cd /Users/macbook/Desktop/Project1/EliteNet-Masters/backend
 source ../.venv/bin/activate
 python run.py
 ```
@@ -103,7 +116,7 @@ python run.py
 Optional port override:
 
 ```bash
-cd /Users/macbook/Desktop/Project1/wifi-hotspot-billing/backend
+cd /Users/macbook/Desktop/Project1/EliteNet-Masters/backend
 source ../.venv/bin/activate
 PORT=5001 python run.py
 ```
@@ -111,7 +124,7 @@ PORT=5001 python run.py
 Production-style local run check:
 
 ```bash
-dcd /Users/macbook/Desktop/Project1/wifi-hotspot-billing/backend
+cd /Users/macbook/Desktop/Project1/EliteNet-Masters/backend
 source ../.venv/bin/activate
 gunicorn run:app --bind 127.0.0.1:8000
 ```
@@ -121,9 +134,12 @@ Create `.env` in `backend/` (never commit this):
 
 ```env
 FLASK_ENV=development
-SECRET_KEY=replace_with_a_long_random_string
-ADMIN_TOKEN_EXP_MINUTES=480
-DATABASE_URL=sqlite:///elitenet_masters.db
+SECRET_KEY=replace_with_a_random_secret_at_least_32_characters
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=replace_with_a_strong_password
+ADMIN_TOKEN_EXP_MINUTES=30
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/elitenet_masters
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/elitenet_masters_test
 
 DARAJA_CONSUMER_KEY=
 DARAJA_CONSUMER_SECRET=
@@ -134,6 +150,85 @@ ROUTEROS_HOST=
 ROUTEROS_USER=
 ROUTEROS_PASSWORD=
 ```
+
+## API Endpoints
+Base URL: `http://127.0.0.1:5555`
+
+Protected endpoints use the HttpOnly JWT cookie set by the admin login. Unsafe
+requests also require the `X-CSRF-TOKEN` header copied from the readable
+`csrf_access_token` cookie.
+
+| Method | Endpoint | Auth | Purpose |
+|--------|----------|------|---------|
+| `POST` | `/api/auth/login` | Public | Admin login |
+| `POST` | `/api/admin/password/change` | Admin JWT | Change the admin password |
+| `GET` | `/api/packages` | Public | List active customer packages |
+| `POST` | `/api/stkpush` | Public | Start an M-Pesa STK Push payment |
+| `GET` | `/api/payment/status/<transaction_id>` | Public | Check payment status |
+| `POST` | `/api/mpesa/callback` | M-Pesa callback | Receive Daraja payment callbacks |
+| `POST` | `/api/reconnect` | Public | Check device reconnection eligibility |
+| `POST` | `/api/vouchers/activate` | Public | Activate a voucher |
+| `POST` | `/api/vouchers/generate` | Admin JWT | Generate an admin voucher |
+| `GET` | `/api/admin/transactions` | Admin JWT | List transactions |
+| `GET` | `/api/admin/active-users` | Admin JWT | List active sessions |
+| `GET` | `/api/admin/routers` | Admin JWT | List routers |
+| `GET` | `/api/admin/network-stats` | Admin JWT | Read PostgreSQL-backed session usage metrics |
+| `GET` | `/api/admin/sessions?status=all` | Admin JWT | List session history; use `active` or `expired` as the status filter |
+| `GET` | `/api/admin/announcement` | Admin JWT | Read the active portal announcement |
+| `POST` | `/api/admin/announcement` | Admin JWT | Publish a portal announcement |
+| `DELETE` | `/api/admin/announcement` | Admin JWT | Clear the latest announcement |
+| `GET` | `/api/admin/plans` | Admin JWT | List all plans |
+| `POST` | `/api/admin/plans` | Admin JWT | Create a plan |
+| `PATCH` | `/api/admin/plans/<plan_id>` | Admin JWT | Update a plan price |
+| `DELETE` | `/api/admin/plans/<plan_id>` | Admin JWT | Archive a plan |
+| `POST` | `/api/admin/restart` | Admin JWT | Mark a router as restarting |
+
+### Common Request Bodies
+
+Admin login:
+
+```json
+{
+	"username": "admin",
+	"password": "Admin@2026"
+}
+```
+
+STK Push:
+
+```json
+{
+	"phone_number": "0708419329",
+	"package_id": 1
+}
+```
+
+Voucher activation:
+
+```json
+{
+	"code": "VCH-XXXXXXXX"
+}
+```
+
+Voucher generation:
+
+```json
+{
+	"package_id": 1,
+	"client_name": "Walk-in"
+}
+```
+
+### Default Admin Credentials
+
+The development bootstrap creates this account when no admin exists:
+
+- Username: `admin`
+- Password: `Admin@2026`
+
+Use these credentials only for local development. Change the password through
+`POST /api/admin/password/change` immediately in any shared or deployed environment.
 
 ## Git Workflow
 - **main** — always deployable, protected.  

@@ -1,14 +1,18 @@
 import "../styles/globals.css";
 
 export const metadata = {
-  title: "EliteNet Masters",
-  description: "WiFi hotspot billing and management",
+  title: "EliteNet Masters WiFi",
+  description: "WiFi hotspot billing portal",
+  icons: {
+    icon: "/icon.svg",
+  },
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body style={{ margin: 0, padding: 0 }}>{children}</body>
     </html>
   );
 }

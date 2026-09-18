@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import PackagesPage from "./packages/page";
 
 export default function HomePage() {
-  redirect("/packages");
+  return <PackagesPage />;
 }

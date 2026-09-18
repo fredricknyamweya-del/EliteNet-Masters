@@ -1,59 +1,69 @@
 import os
 from decimal import Decimal
 
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
-from werkzeug.security import generate_password_hash
 
-from app.extensions import db, migrate
+from extensions import api, bcrypt, db, jwt, migrate
 from config import config_by_name
-from routes import ALL_BLUEPRINTS
+from app.routes import __all__
 
 
 def _ensure_default_admin(app):
 	with app.app_context():
 		db.create_all()
 
-		from models.models import Admin
+		from app.models import Admin
 
-		admin = Admin.query.filter_by(username="admin").first()
+		admin_username = os.getenv("ADMIN_USERNAME", "admin")
+		admin_password = os.getenv("ADMIN_PASSWORD", "1alutastation")
+		if os.getenv("FLASK_ENV") == "production" and not os.getenv("ADMIN_PASSWORD"):
+			raise RuntimeError("ADMIN_PASSWORD must be set in production")
+		admin = Admin.query.filter_by(username=admin_username).first()
 		if admin is None:
-			admin = Admin(username="admin", password_hash=generate_password_hash("Admin@2026"))
+			admin = Admin(username=admin_username)
+			admin.set_password(admin_password)
 			db.session.add(admin)
 			db.session.commit()
 		elif not admin.password_hash:
-			admin.set_password("Admin@2026")
+			admin.set_password(admin_password)
 			db.session.commit()
 
 
 def _ensure_default_packages(app):
 	with app.app_context():
-		from models.models import Package
+		from app.models import Package
 
 		default_packages = [
-			("30 Minutes", Decimal("5.00"), 30),
-			("3 Hours", Decimal("10.00"), 180),
-			("6 Hours", Decimal("20.00"), 360),
-			("24 Hours", Decimal("30.00"), 1440),
-			("Weekly", Decimal("170.00"), 10080),
-			("Monthly", Decimal("600.00"), 43200),
+			("Smoke Plan", Decimal("2.00"), 5),
+			("30min", Decimal("5.00"), 30),
+			("45min", Decimal("7.00"), 45),
+			("1hour", Decimal("10.00"), 60),
+			("2hours", Decimal("15.00"), 120),
+			("3hours", Decimal("20.00"), 180),
+			("4hours", Decimal("30.00"), 240),
+			("6hours", Decimal("35.00"), 360),
+			("12hours", Decimal("45.00"), 720),
+			("24hours", Decimal("55.00"), 1440),
+			("Weekly", Decimal("175.00"), 10080),
+			("Monthly", Decimal("595.00"), 43200),
 		]
+		existing_by_duration = {}
+		for package in Package.query.order_by(Package.id.asc()).all():
+			package.is_active = False
+			existing_by_duration.setdefault(package.duration_minutes, package)
 
 		for name, price, duration_minutes in default_packages:
-			package = Package.query.filter_by(name=name).first()
+			package = existing_by_duration.get(duration_minutes)
 			if package is None:
-				db.session.add(
-					Package(
-						name=name,
-						price=price,
-						duration_minutes=duration_minutes,
-						is_active=True,
-					)
-				)
-			else:
-				package.price = price
-				package.duration_minutes = duration_minutes
-				package.is_active = True
+				package = Package(duration_minutes=duration_minutes)
+				db.session.add(package)
+				existing_by_duration[duration_minutes] = package
+
+			package.name = name
+			package.price = price
+			package.duration_minutes = duration_minutes
+			package.is_active = True
 
 		db.session.commit()
 
@@ -90,32 +100,64 @@ def _setup_session_expiry_scheduler(app):
 
 
 def create_app(config_name=None):
-	app = Flask(__name__, instance_relative_config=True)
+	app = Flask(__name__)
 
 	selected_config = config_name or os.getenv("FLASK_ENV", "development")
 	config_object = config_by_name.get(selected_config, config_by_name["development"])
 	app.config.from_object(config_object)
 
-	database_url = os.getenv("DATABASE_URL")
-	if database_url and database_url.startswith("postgres://"):
-		database_url = database_url.replace("postgres://", "postgresql://", 1)
-		app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+	CORS(
+		app,
+		resources={
+			r"/api/*": {
+				"origins": [
+					"http://localhost:3000",
+					"http://127.0.0.1:3000",
+					"https://elitenet-masters.onrender.com",
+				],
+				"supports_credentials": True,
+				"allow_headers": ["Content-Type", "X-CSRF-TOKEN"],
+				"methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+			}
+		},
+	)
 
-	CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
+	allowed_origins = {
+		"http://localhost:3000",
+		"http://127.0.0.1:3000",
+		"https://elitenet-masters.onrender.com",
+	}
+
+	@app.after_request
+	def add_local_cors_headers(response):
+		origin = request.headers.get("Origin")
+		if origin in allowed_origins:
+			response.headers["Access-Control-Allow-Origin"] = origin
+			response.headers["Access-Control-Allow-Credentials"] = "true"
+			response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-CSRF-TOKEN"
+			response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+			response.headers.add("Vary", "Origin")
+		return response
 
 	db.init_app(app)
+	bcrypt.init_app(app)
+	jwt.init_app(app)
+	api.init_app(app)
 	if migrate is not None:
 		migrate.init_app(app, db)
 	# Ensure model metadata is loaded before db.create_all or migrations.
-	from models import models as _models  # noqa: F401
+	
+		from app import models as _models  # noqa: F401
+		from app.models import RevokedToken
 
-	for blueprint in ALL_BLUEPRINTS:
-		app.register_blueprint(blueprint)
+		@jwt.token_in_blocklist_loader
+		def _is_revoked(jwt_header, jwt_payload):
+			return db.session.get(RevokedToken, jwt_payload["jti"]) is not None
 
-	_ensure_default_admin(app)
-	_ensure_default_packages(app)
-	_setup_session_expiry_scheduler(app)
-	return app
+		_ensure_default_admin(app)
+		_ensure_default_packages(app)
+		_setup_session_expiry_scheduler(app)
+		return app
 
 
 app = create_app()
@@ -131,7 +173,7 @@ except Exception:
 if __name__ == "__main__":
 	# Allow overriding the port via the PORT environment variable (useful when 5000 is occupied)
 	try:
-		port = int(os.getenv("PORT", "5000"))
+		port = int(os.getenv("PORT", "5555"))
 	except Exception:
 		port = 5000
 	app.run(host="0.0.0.0", port=port)

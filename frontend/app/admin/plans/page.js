@@ -6,7 +6,7 @@ import CyberpunkBackground from "../../../components/CyberpunkBackground";
 import GlassCard from "../../../components/GlassCard";
 import NeonInput from "../../../components/NeonInput";
 import GradientButton from "../../../components/GradientButton";
-import { getPlans, updatePlan } from "../../../lib/api";
+import { createPlan, deletePlan, getPlans, updatePlan } from "../../../lib/api";
 
 export default function ManagePlansPage() {
   const router = useRouter();
@@ -15,8 +15,10 @@ export default function ManagePlansPage() {
   const [editingId, setEditingId] = useState(null);
   const [editPrice, setEditPrice] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [savedId, setSavedId] = useState(null);
   const [error, setError] = useState(null);
+  const [newPlan, setNewPlan] = useState({ name: "", price: "", duration: "" });
 
   // Load plans from backend on mount
   useEffect(() => {
@@ -24,7 +26,7 @@ export default function ManagePlansPage() {
       try {
         const result = await getPlans();
         if (result.status === "success") {
-          setPlans(result.data);
+          setPlans(result.data.filter((plan) => plan.is_active));
         }
       } catch {
         setError("Failed to load plans. Check backend connection.");
@@ -79,6 +81,35 @@ export default function ManagePlansPage() {
     }
   }
 
+  async function handleCreate() {
+    const price = Number(newPlan.price);
+    const duration = Number(newPlan.duration);
+    if (!newPlan.name.trim() || !Number.isFinite(price) || price <= 0 || !Number.isInteger(duration) || duration <= 0) {
+      setError("Enter a plan name, positive price, and positive whole-minute duration.");
+      return;
+    }
+    try {
+      const result = await createPlan(newPlan.name.trim(), price, duration);
+      setPlans((prev) => [...prev, result.data]);
+      setNewPlan({ name: "", price: "", duration: "" });
+    } catch (requestError) {
+      setError(requestError.message || "Failed to create plan.");
+    }
+  }
+
+  async function handleDelete(planId) {
+    setDeletingId(planId);
+    setError(null);
+    try {
+      await deletePlan(planId);
+      setPlans((prev) => prev.filter((plan) => plan.id !== planId));
+    } catch (requestError) {
+      setError(requestError.message || "Failed to archive plan.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden">
       <CyberpunkBackground />
@@ -101,6 +132,16 @@ export default function ManagePlansPage() {
           Tap a plan to edit its price. Changes update immediately on the
           client portal.
         </p>
+
+        <GlassCard borderColor="green" className="p-5 flex flex-col gap-3">
+          <h2 className="text-[#e0f2ec] font-semibold text-sm">Create plan</h2>
+          <NeonInput placeholder="Plan name" value={newPlan.name} onChange={(value) => setNewPlan((prev) => ({ ...prev, name: value }))} borderColor="cyan" />
+          <div className="grid grid-cols-2 gap-2">
+            <NeonInput placeholder="Price (KSh)" type="number" value={newPlan.price} onChange={(value) => setNewPlan((prev) => ({ ...prev, price: value }))} borderColor="cyan" />
+            <NeonInput placeholder="Minutes" type="number" value={newPlan.duration} onChange={(value) => setNewPlan((prev) => ({ ...prev, duration: value }))} borderColor="cyan" />
+          </div>
+          <GradientButton onClick={handleCreate}>Create plan</GradientButton>
+        </GlassCard>
 
         {/* Error state */}
         {error && (
@@ -186,6 +227,14 @@ export default function ManagePlansPage() {
                         className="text-[#13caeb] text-xs underline"
                       >
                         Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(plan.id)}
+                        disabled={deletingId === plan.id}
+                        aria-label={`Delete ${plan.name}`}
+                        className="text-red-300 text-xs underline disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {deletingId === plan.id ? "Deleting..." : "Delete"}
                       </button>
                     </div>
                   </div>

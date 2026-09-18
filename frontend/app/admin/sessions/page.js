@@ -21,16 +21,18 @@ export default function SessionsPage() {
   const [query, setQuery] = useState("");
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let mounted = true;
     async function load() {
       setLoading(true);
+      setError("");
       try {
         const res = await getSessionHistory(filter);
         if (mounted && res?.status === "success") setSessions(res.data || []);
-      } catch {
-        // ignore mock
+      } catch (requestError) {
+        if (mounted) setError(requestError.message || "Failed to load sessions.");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -76,6 +78,7 @@ export default function SessionsPage() {
           </div>
 
           <GlassCard borderColor="#10B981" className="p-5 sm:p-6">
+            {error && <p className="mb-4 rounded-xl border border-red-400/40 bg-red-500/10 p-4 text-sm text-red-300">{error}</p>}
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-orbitron text-[#22b4af]">Sessions</h3>
               <p className="text-sm text-white/60">{loading ? 'Loading...' : `${filtered.length} sessions`}</p>

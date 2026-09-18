@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
-import PackagesPage from "../packages/page";
+import PackagesPage, { PACKAGES } from "../packages/page";
 
 jest.mock("../../lib/api", () => ({
   triggerStkPush: jest.fn(),
@@ -11,6 +11,11 @@ import { triggerStkPush, checkPaymentStatus } from "../../lib/api";
 describe("Payment flow integration", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  test("package IDs are unique for React keys", () => {
+    const ids = PACKAGES.map((pkg) => pkg.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   test("full happy path: select package → enter phone → pay → pending → success", async () => {
