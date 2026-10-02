@@ -109,18 +109,21 @@ def create_app(config_name=None):
 	config_object = config_by_name.get(selected_config, config_by_name["development"])
 	app.config.from_object(config_object)
 
-	default_cors_origins = (
-		"http://localhost:3000,"
-		"http://127.0.0.1:3000,"
-		"https://elitenetmasters.com,"
-		"https://www.elitenetmasters.com,"
-		"https://elitenet-masters.onrender.com"
-	)
-	cors_origins = [
-		origin.strip().rstrip("/")
-		for origin in os.getenv("CORS_ORIGINS", default_cors_origins).split(",")
-		if origin.strip()
+	configured_cors_origins = os.getenv("CORS_ORIGINS", "")
+	production_cors_origins = [
+		"https://elitenet-masters.onrender.com",
+		"https://elitenetmasters.com",
+		"https://www.elitenetmasters.com",
 	]
+	if selected_config != "production":
+		production_cors_origins.extend(
+			["http://localhost:3000", "http://127.0.0.1:3000"]
+		)
+	cors_origins = list(dict.fromkeys(
+		origin.strip().rstrip("/")
+		for origin in [*production_cors_origins, *configured_cors_origins.split(",")]
+		if origin.strip()
+	))
 
 	CORS(
 		app,
@@ -149,9 +152,10 @@ def create_app(config_name=None):
 		def _is_revoked(jwt_header, jwt_payload):
 			return db.session.get(RevokedToken, jwt_payload["jti"]) is not None
 
-		_ensure_default_admin(app)
-		_ensure_default_packages(app)
-		_setup_session_expiry_scheduler(app)
+		if os.getenv("VERCEL") != "1":
+			_ensure_default_admin(app)
+			_ensure_default_packages(app)
+			_setup_session_expiry_scheduler(app)
 		return app
 
 
