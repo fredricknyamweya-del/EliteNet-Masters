@@ -161,13 +161,6 @@ def create_app(config_name=None):
 
 app = create_app()
 
-import os
-try:
-	print("[startup] CWD:", os.getcwd())
-	print("[startup] SQLALCHEMY_DATABASE_URI:", app.config.get("SQLALCHEMY_DATABASE_URI"))
-except Exception:
-	pass
-
 
 if __name__ == "__main__":
 	# Allow overriding the port via the PORT environment variable (useful when 5000 is occupied)

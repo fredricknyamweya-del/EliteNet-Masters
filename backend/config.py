@@ -8,9 +8,15 @@ def _get_database_uri(environment_names, default_database):
         f"postgresql://postgres:postgres@localhost:5432/{default_database}",
     )
     database_url = database_url.replace("postgres://", "postgresql://", 1)
+    database_url = database_url.replace(
+        "postgresql+psycopg://", "postgresql+psycopg2://", 1
+    )
 
     if not database_url.startswith(("postgresql://", "postgresql+psycopg2://")):
-        raise ValueError("Only PostgreSQL database URLs are supported")
+        raise ValueError(
+            "Database URL must be a PostgreSQL connection string, not a Supabase "
+            "Project URL or API key"
+        )
 
     return database_url
 

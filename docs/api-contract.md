@@ -5,6 +5,7 @@
 - The Next.js frontend is deployed on Render at `https://elitenet-masters.onrender.com` and `https://elitenetmasters.com` (including `www` where configured).
 - The Python Flask application is deployed as a Vercel Function at `https://elite-net-masters.vercel.app`.
 - PostgreSQL is hosted by Supabase. The Flask function connects using `DATABASE_URL`; the browser does not connect directly to Supabase.
+- In Vercel, `DATABASE_URL` must be a PostgreSQL DSN copied from Supabase's Connect dialog, for example `postgresql://postgres:<URL-ENCODED-PASSWORD>@db.<project-ref>.supabase.co:5432/postgres?sslmode=require`. Do not use the Supabase Project URL (`https://...supabase.co`) or publishable API key as `DATABASE_URL`. If the direct endpoint is unreachable from the runtime, use the pooler connection string supplied by Supabase.
 - `/api/packages` is a Flask-RESTful route registered in `backend/app/routes/packages.py`. It is not a Next.js API route and is not a Next.js rewrite. Other `/api/*` endpoints are registered by the Flask backend as well.
 - The frontend's `NEXT_PUBLIC_API_URL` must be the Flask Vercel origin without a trailing slash or `/api`, for example `https://elite-net-masters.vercel.app`.
 
