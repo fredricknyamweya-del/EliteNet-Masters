@@ -9,6 +9,7 @@ Flask-APScheduler>=1.13.1
 python-dotenv>=1.0.1
 requests>=2.31.0
 psycopg2-binary>=2.9.9
+psycopg[binary]>=3.2.3
 routeros-api>=0.17.0
 redis>=5.0.0
 gunicorn>=22.0.0
