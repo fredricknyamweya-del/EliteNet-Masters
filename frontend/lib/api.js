@@ -34,7 +34,10 @@ async function request(path, { method = "GET", body, auth = false, query } = {})
     throw new Error("NEXT_PUBLIC_API_URL is not configured.");
   }
 
-  const headers = { "Content-Type": "application/json" };
+  const headers = {};
+  if (body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     const csrfToken = getCookie("csrf_access_token");
     if (csrfToken) headers["X-CSRF-TOKEN"] = csrfToken;
