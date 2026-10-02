@@ -1,7 +1,7 @@
 import os
 from decimal import Decimal
 
-from flask import Flask, request
+from flask import Flask
 from flask_cors import CORS
 
 from extensions import api, bcrypt, db, jwt, migrate
@@ -17,6 +17,9 @@ def _ensure_default_admin(app):
 
 		admin_username = os.getenv("ADMIN_USERNAME", "admin")
 		admin_password = os.getenv("ADMIN_PASSWORD", "1alutastation")
+		reset_admin_password = os.getenv("RESET_ADMIN_PASSWORD", "false").strip().lower() in {
+			"1", "true", "yes", "on"
+		}
 		if os.getenv("FLASK_ENV") == "production" and not os.getenv("ADMIN_PASSWORD"):
 			raise RuntimeError("ADMIN_PASSWORD must be set in production")
 		admin = Admin.query.filter_by(username=admin_username).first()
@@ -25,7 +28,7 @@ def _ensure_default_admin(app):
 			admin.set_password(admin_password)
 			db.session.add(admin)
 			db.session.commit()
-		elif not admin.password_hash:
+		elif reset_admin_password or not admin.password_hash:
 			admin.set_password(admin_password)
 			db.session.commit()
 
@@ -106,38 +109,30 @@ def create_app(config_name=None):
 	config_object = config_by_name.get(selected_config, config_by_name["development"])
 	app.config.from_object(config_object)
 
+	default_cors_origins = (
+		"http://localhost:3000,"
+		"http://127.0.0.1:3000,"
+		"https://elitenetmasters.com,"
+		"https://www.elitenetmasters.com,"
+		"https://elitenet-masters.onrender.com"
+	)
+	cors_origins = [
+		origin.strip().rstrip("/")
+		for origin in os.getenv("CORS_ORIGINS", default_cors_origins).split(",")
+		if origin.strip()
+	]
+
 	CORS(
 		app,
 		resources={
 			r"/api/*": {
-				"origins": [
-					"http://localhost:3000",
-					"http://127.0.0.1:3000",
-					"https://elitenet-masters.onrender.com",
-				],
+				"origins": cors_origins,
 				"supports_credentials": True,
 				"allow_headers": ["Content-Type", "X-CSRF-TOKEN"],
 				"methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 			}
 		},
 	)
-
-	allowed_origins = {
-		"http://localhost:3000",
-		"http://127.0.0.1:3000",
-		"https://elitenet-masters.onrender.com",
-	}
-
-	@app.after_request
-	def add_local_cors_headers(response):
-		origin = request.headers.get("Origin")
-		if origin in allowed_origins:
-			response.headers["Access-Control-Allow-Origin"] = origin
-			response.headers["Access-Control-Allow-Credentials"] = "true"
-			response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-CSRF-TOKEN"
-			response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-			response.headers.add("Vary", "Origin")
-		return response
 
 	db.init_app(app)
 	bcrypt.init_app(app)

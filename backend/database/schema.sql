@@ -57,6 +57,9 @@ CREATE TABLE IF NOT EXISTS vouchers (
     expires_at TIMESTAMPTZ
 );
 
+supabase init
+supabase link --project-ref iiesgbaxzdexnsybmhza
+
 CREATE TABLE IF NOT EXISTS devices (
     id SERIAL PRIMARY KEY,
     client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
